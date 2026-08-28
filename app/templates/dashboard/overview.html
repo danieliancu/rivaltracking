@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block content %}
+<section class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+  <div>
+    <h1 class="text-2xl font-extrabold tracking-tight">Competitor Dashboard</h1>
+    <p class="mt-1 text-xs text-muted-foreground">Real-time intelligence across your monitored competitors.</p>
+  </div>
+  {% if competitor %}{% include "dashboard/partials/competitor_pill.html" %}{% endif %}
+</section>
+
+<div id="overview-metrics" class="contents"
+     hx-get="{% url 'dashboard:overview' %}" hx-trigger="range:changed from:body" hx-target="this" hx-swap="innerHTML">
+  {% include "dashboard/partials/metrics.html" %}
+</div>
+
+<section class="grid gap-4 xl:grid-cols-[2fr_1fr]">
+  <div id="overview-changes" class="contents">
+    {% include "dashboard/partials/changes_card.html" %}
+  </div>
+
+  <div class="flex flex-col overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+    <div class="flex flex-col gap-1.5 px-6 pb-4">
+      <h2 class="text-sm font-bold leading-none">Similar Companies Discovered</h2>
+      <p class="text-xs text-muted-foreground">Auto-detected competitors matching your market</p>
+    </div>
+    {% if suggestions %}
+      {% for s in suggestions %}
+        {% include "components/company_discovery_row.html" with d=s.d tone_class=s.tone_class %}
+      {% endfor %}
+    {% else %}
+      {% empty_state heading="No discoveries yet" text="Run discovery to find companies similar to your competitors." action_label="Discover competitors" action_href="/discovery" %}
+    {% endif %}
+    <div class="mt-auto border-t">
+      <a href="{% url 'discovery:index' %}" class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-none text-[11px] font-bold text-primary transition-colors hover:bg-accent">
+        View all discoveries {% icon "arrow-right" class="size-3.5" %}
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

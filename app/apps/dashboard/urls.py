@@ -6,4 +6,5 @@ app_name = "dashboard"
 
 urlpatterns = [
     path("", views.overview, name="overview"),
+    path("select-competitor/", views.select_competitor, name="select_competitor"),
 ]

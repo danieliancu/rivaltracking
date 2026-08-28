@@ -1,0 +1,11 @@
+{% load ui %}<span class="flex items-center gap-2.5">
+  <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {{ tone_class }}">{% icon icon class="size-4" %}</span>
+  <span class="min-w-0">
+    {% if href %}
+    <a href="{{ href }}" class="block truncate text-sm font-medium text-foreground hover:text-primary hover:underline">{{ name }}</a>
+    {% else %}
+    <span class="block truncate text-sm font-medium text-foreground">{{ name }}</span>
+    {% endif %}
+    {% if sku %}<span class="mt-0.5 block text-[11px] text-muted-foreground">{{ sku }}</span>{% endif %}
+  </span>
+</span>

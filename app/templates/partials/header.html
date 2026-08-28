@@ -1,0 +1,103 @@
+{% load ui %}
+<header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur-md md:px-6">
+  <button type="button" @click="$store.ui.sidebarOpen = true" aria-label="Open sidebar"
+          class="inline-flex size-7 items-center justify-center rounded-md text-foreground hover:bg-accent hover:text-accent-foreground md:hidden">
+    {% icon "panel-left" class="size-4" %}
+  </button>
+
+  {# Global search with grouped-results popover (results rendered by core:search). #}
+  <div class="relative w-full max-w-md" x-data="searchPalette()" @click.outside="open = false" @keydown.escape="close(); $refs.input.blur()">
+    {% icon "search" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" %}
+    <input x-ref="input" x-model="q" name="q" type="text" autocomplete="off"
+           placeholder="Search competitors, products or categories..."
+           aria-label="Search competitors, products or categories"
+           hx-get="{% url 'core:search' %}" hx-trigger="input changed delay:200ms" hx-target="#search-results"
+           @focus="open = true" @input="open = true"
+           class="flex h-9 w-full min-w-0 rounded-full border border-input bg-card py-1 pl-9 pr-3 text-xs shadow-xs outline-none transition-[color,box-shadow] placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+    <div x-show="open && q.trim().length" x-cloak
+         class="absolute left-0 top-11 z-50 w-full min-w-80 overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md">
+      <div id="search-results" class="max-h-[300px] overflow-y-auto overscroll-contain"></div>
+    </div>
+  </div>
+
+  {% include "partials/range_tabs.html" %}
+
+  {# Run Scan: direct button with competitor context, picker dropdown without. #}
+  {% if scan_context %}
+  <button type="button"
+          hx-post="{% url 'core:run_scan' %}" hx-vals='{"competitor": "{{ scan_context|escapejs }}"}' hx-swap="none"
+          class="ml-auto inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-md shadow-primary/25 transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 md:ml-0 [&.htmx-request]:pointer-events-none [&.htmx-request]:opacity-50">
+    {% icon "play" class="size-3.5 fill-current" %}
+    Run Scan
+  </button>
+  {% else %}
+  <div class="relative ml-auto shrink-0 md:ml-0" x-data="menu()" @click.outside="close()">
+    <button type="button" @click="toggle()"
+            class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-md shadow-primary/25 transition-colors hover:bg-primary/90">
+      {% icon "play" class="size-3.5 fill-current" %}
+      Run Scan
+    </button>
+    <div x-show="open" x-cloak x-transition.opacity.duration.100ms @keydown.escape.window="close()"
+         class="absolute right-0 top-11 z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+      <div class="px-2 py-1.5 text-xs font-medium text-muted-foreground">Run scan for:</div>
+      {% for c in header_competitors %}
+      <button type="button" @click="close()"
+              hx-post="{% url 'core:run_scan' %}" hx-vals='{"competitor": "{{ c.name|escapejs }}"}' hx-swap="none"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs font-semibold outline-hidden hover:bg-accent hover:text-accent-foreground">{{ c.name }}</button>
+      {% endfor %}
+      <div class="-mx-1 my-1 h-px bg-border"></div>
+      <button type="button" @click="close()"
+              hx-post="{% url 'core:run_scan' %}" hx-vals='{"competitor": "All competitors"}' hx-swap="none"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs font-semibold outline-hidden hover:bg-accent hover:text-accent-foreground">All competitors</button>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Account menu + sign-out confirmation. #}
+  <div class="relative shrink-0" x-data="menu()" @click.outside="close()">
+    <button type="button" @click="toggle()" aria-label="Account menu" class="rounded-full outline-none">
+      <span class="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-primary to-purple text-[11px] font-extrabold text-primary-foreground">DI</span>
+    </button>
+    <div x-show="open" x-cloak x-transition.opacity.duration.100ms @keydown.escape.window="close()"
+         class="absolute right-0 top-11 z-50 w-52 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+      <div class="px-2 py-1.5">
+        <span class="block text-sm font-semibold">Dani Iancu</span>
+        <span class="block text-[11px] font-normal text-muted-foreground">dani@rivaltracking.com</span>
+      </div>
+      <div class="-mx-1 my-1 h-px bg-border"></div>
+      <a href="{% url 'settings_app:section' 'team' %}" class="flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">Profile</a>
+      <a href="{% url 'settings_app:section' 'billing' %}" class="flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">Billing</a>
+      <a href="{% url 'settings_app:section' 'workspace' %}" class="flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">Workspace settings</a>
+      <div class="-mx-1 my-1 h-px bg-border"></div>
+      <button type="button" @click="close(); $dispatch('open-sign-out')"
+              class="flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">Sign out</button>
+      <div class="-mx-1 my-1 h-px bg-border"></div>
+      <button type="button" @click="close()"
+              hx-post="{% url 'core:reset_demo' %}" hx-swap="none"
+              class="flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-muted-foreground outline-hidden hover:bg-accent hover:text-accent-foreground">Reset demo data</button>
+    </div>
+  </div>
+
+  {# Sign-out AlertDialog (static content, Alpine-managed). #}
+  <div x-data="{ open: false }" @open-sign-out.window="open = true" @keydown.escape.window="open = false">
+    <template x-teleport="body">
+      <div x-show="open" x-cloak class="relative z-50">
+        <div x-show="open" x-transition.opacity.duration.150ms class="fixed inset-0 bg-black/50" @click="open = false"></div>
+        <div x-show="open" x-transition.duration.150ms x-trap.noscroll="open"
+             class="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg sm:max-w-lg">
+          <div class="flex flex-col gap-2 text-center sm:text-left">
+            <h2 class="text-lg font-semibold">Sign out?</h2>
+            <p class="text-sm text-muted-foreground">You will be returned to the sign-in screen.</p>
+          </div>
+          <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button type="button" @click="open = false"
+                    class="inline-flex h-9 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">Cancel</button>
+            <button type="button" @click="open = false"
+                    hx-post="{% url 'core:sign_out' %}" hx-swap="none"
+                    class="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs hover:bg-primary/90">Sign out</button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+</header>

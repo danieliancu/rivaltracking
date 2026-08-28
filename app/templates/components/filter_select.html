@@ -1,0 +1,15 @@
+{% load ui %}<span class="relative inline-flex {{ width }}">
+  <select name="{{ name }}" aria-label="{{ aria_label }}"
+          class="h-8 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent py-1 pl-3 pr-7 text-[10px] font-semibold text-muted-foreground shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+    {% for opt in options %}
+      {% if opt.options %}
+      <optgroup label="{{ opt.label }}">
+        {% for sub in opt.options %}<option value="{{ sub.value }}" {% if sub.value == selected %}selected{% endif %}>{{ sub.label }}</option>{% endfor %}
+      </optgroup>
+      {% else %}
+      <option value="{{ opt.value }}" {% if opt.value == selected %}selected{% endif %}>{{ opt.label }}</option>
+      {% endif %}
+    {% endfor %}
+  </select>
+  {% icon "chevron-down" class="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground opacity-50" %}
+</span>

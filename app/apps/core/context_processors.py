@@ -1,7 +1,68 @@
 """Context shared by the application shell (sidebar + header) on every page."""
+from django.urls import reverse
+
+from apps.core.mock.store import MockStore
+
+NAV = [
+    ("Overview", "layout-dashboard", "dashboard:overview"),
+    ("Competitors", "boxes", "competitors:index"),
+    ("Products", "package", "products:index"),
+    ("Changes", "git-compare-arrows", "changes:index"),
+    ("Reports", "file-bar-chart-2", "reports:index"),
+    ("Alerts", "bell", "alerts:index"),
+    ("Ask AI", "sparkles", "ai:index"),
+    ("Discovery", "compass", "discovery:index"),
+    ("Settings", "settings", "settings_app:index"),
+]
+
+RANGES = [
+    {"key": "today", "label": "Today"},
+    {"key": "7d", "label": "7D"},
+    {"key": "30d", "label": "30D"},
+]
+
+
+def _scan_context(request, store):
+    """Competitor-detail route wins, then the dashboard competitor selector."""
+    match = request.resolver_match
+    slug = None
+    if match and match.namespace == "competitors" and match.url_name == "detail":
+        slug = match.kwargs.get("slug")
+    elif request.session.get("selected_competitor"):
+        slug = request.session["selected_competitor"]
+    if not slug:
+        return None
+    for row in store.get("competitors"):
+        if row["slug"] == slug:
+            return row["name"]
+    return None
 
 
 def shell(request):
+    store = MockStore(request)
+    path = request.path
+
+    nav_items = []
+    for label, icon, url_name in NAV:
+        url = reverse(url_name)
+        active = path == "/" if url == "/" else path.startswith(url)
+        nav_items.append({"label": label, "icon": icon, "url": url, "active": active})
+
+    try:
+        recent_alerts = store.get("recent_alerts")
+        unread = sum(1 for a in recent_alerts if a["status"] == "new")
+        competitors = [
+            {"name": c["name"], "slug": c["slug"]} for c in store.get("competitors")
+        ]
+        scan_context = _scan_context(request, store)
+    except ImportError:  # data modules land incrementally during the build
+        unread, competitors, scan_context = 0, [], None
+
     return {
+        "nav_items": nav_items,
+        "unread_count": unread,
+        "ranges": RANGES,
         "date_range": request.session.get("date_range", "30d"),
+        "header_competitors": competitors,
+        "scan_context": scan_context,
     }

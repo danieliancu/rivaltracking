@@ -1,0 +1,23 @@
+{% load ui %}{# Sonner-style toast delivered out-of-band into #toast-region.
+   Context: variant (success|info|warning|error), title, description (optional). #}
+<div hx-swap-oob="afterbegin:#toast-region">
+  <div x-data="{ show: false }"
+       x-init="$nextTick(() => show = true); setTimeout(() => { show = false; setTimeout(() => $el.remove(), 200) }, 4000)"
+       x-show="show"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-y-3 opacity-0"
+       x-transition:enter-end="translate-y-0 opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="pointer-events-auto flex w-[356px] max-w-[calc(100vw-2rem)] items-start gap-2.5 rounded-[10px] border bg-popover p-4 text-popover-foreground shadow-lg">
+    {% if variant == "success" %}{% icon "circle-check" class="mt-0.5 size-4 shrink-0 text-success" %}
+    {% elif variant == "warning" %}{% icon "triangle-alert" class="mt-0.5 size-4 shrink-0 text-warning" %}
+    {% elif variant == "error" %}{% icon "octagon-x" class="mt-0.5 size-4 shrink-0 text-destructive" %}
+    {% else %}{% icon "info" class="mt-0.5 size-4 shrink-0 text-info" %}{% endif %}
+    <div class="min-w-0">
+      <p class="text-[13px] font-semibold">{{ title }}</p>
+      {% if description %}<p class="mt-0.5 text-xs text-muted-foreground">{{ description }}</p>{% endif %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,8 @@
+{% load ui %}<span class="inline-flex min-w-0 flex-col gap-0.5">
+  <span class="flex min-w-0 flex-wrap items-center gap-1.5">
+    <span class="break-words text-muted-foreground line-through decoration-muted-foreground/40">{{ previous }}</span>
+    {% icon "move-right" class="size-3.5 shrink-0 text-muted-foreground/50" %}
+    <span class="break-words font-medium text-foreground">{{ current }}</span>
+  </span>
+  {% if secondary %}<span class="text-[11px] font-medium {{ secondary_class }}">{{ secondary }}</span>{% endif %}
+</span>

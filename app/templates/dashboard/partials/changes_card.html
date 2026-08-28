@@ -1,0 +1,49 @@
+{% load ui %}{# Recent Change Events card (dashboard/changes-table.tsx) —
+   reused on competitor details with different title/kinds via context. #}
+<div class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+  <div class="flex flex-col gap-1.5 px-6 pb-4">
+    <h2 class="text-sm font-bold leading-none">{{ table_title|default:"Recent Change Events" }}</h2>
+    <p class="text-xs text-muted-foreground">{% if table_description %}{{ table_description }}{% else %}Latest detected movements across {{ competitor.name|default:"your competitors" }}{% endif %}</p>
+  </div>
+  <div class="px-0">
+    <div class="overflow-x-auto">
+      {% if not recent_events %}
+        {% empty_state heading="No recent changes" text="Change history begins after the second successful scan." %}
+      {% else %}
+      <table class="w-full caption-bottom text-sm" style="min-width: 760px">
+        <thead>
+          <tr class="border-b">
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Product</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Change</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Old Value</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">New Value</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Stock</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Category</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in recent_events %}
+          <tr class="cursor-pointer border-b text-[11px] text-muted-foreground transition-colors hover:bg-muted/50"
+              hx-get="{% url 'changes:drawer' e.id %}" hx-target="#drawer-root" hx-swap="innerHTML">
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% product_identity product=e.product %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% change_badge e.kind e.label %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ e.previous }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle font-medium text-foreground">{{ e.current }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% if e.evidence.current.stock == "In stock" %}{% stock_badge True %}{% else %}{% stock_badge False %}{% endif %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ e.category }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ e.detected }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+    </div>
+  </div>
+  <div class="mt-auto">
+    <a href="{% url 'changes:index' %}{% if competitor %}?competitor={{ competitor.slug }}{% endif %}"
+       class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-none text-[11px] font-bold text-primary transition-colors hover:bg-accent">
+      View all changes {% icon "arrow-right" class="size-3.5" %}
+    </a>
+  </div>
+</div>

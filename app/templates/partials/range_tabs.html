@@ -1,0 +1,12 @@
+{# Global Today/7D/30D range tabs. Re-rendered via hx-post core:set_range,
+   which also fires range:changed for listening page fragments. #}
+<div id="range-tabs" class="ml-auto hidden md:block">
+  <div class="inline-flex h-9 w-fit items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground">
+    {% for r in ranges %}
+    <button type="button"
+            hx-post="{% url 'core:set_range' %}" hx-vals='{"range": "{{ r.key }}"}'
+            hx-target="#range-tabs" hx-swap="outerHTML"
+            class="inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-3 py-1 text-[11px] font-semibold transition-[color,box-shadow] {% if r.key == date_range %}bg-primary text-primary-foreground{% else %}text-foreground{% endif %}">{{ r.label }}</button>
+    {% endfor %}
+  </div>
+</div>

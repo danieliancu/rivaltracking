@@ -4,19 +4,36 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}RivalTracking — Competitor Intelligence{% endblock %}</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%25E2%2597%2586%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%97%86%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <style>[x-cloak]{display:none !important}</style>
   <script defer src="{% static 'js/vendor/htmx.min.js' %}"></script>
+  <script defer src="{% static 'js/vendor/chart.umd.min.js' %}"></script>
+  <script defer src="{% static 'js/vendor/chartjs-plugin-datalabels.min.js' %}"></script>
+  <script defer src="{% static 'js/charts.js' %}"></script>
+  <script defer src="{% static 'js/app.js' %}"></script>
+  <script defer src="{% static 'js/vendor/alpine-focus.min.js' %}"></script>
+  <script defer src="{% static 'js/vendor/alpine.min.js' %}"></script>
+  {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-background text-foreground antialiased"
       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
   {% block shell %}
-  <main class="flex flex-col gap-5 p-4 pb-8 md:p-6 lg:px-7">
-    {% block content %}{% endblock %}
-  </main>
+  {% include "partials/sidebar.html" %}
+  <div class="relative flex min-h-svh w-full flex-1 flex-col bg-background md:pl-64">
+    {% include "partials/header.html" %}
+    <main class="flex flex-col gap-5 p-4 pb-8 md:p-6 lg:px-7">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
   {% endblock %}
+
+  {# Overlay + notification mount points (HTMX swap targets). #}
+  <div id="drawer-root"></div>
+  <div id="modal-root"></div>
+  <div id="toast-region" class="pointer-events-none fixed bottom-4 right-4 z-[100] flex flex-col items-end gap-2"></div>
 </body>
 </html>

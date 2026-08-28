@@ -1,0 +1,38 @@
+{% load ui %}{# Inner sidebar content shared by the desktop rail and the mobile offcanvas. #}
+<div class="flex h-[72px] shrink-0 flex-col justify-center gap-2 px-4">
+  <div class="flex items-center gap-2.5">
+    <div class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-purple text-xl font-extrabold text-primary-foreground shadow-lg shadow-primary/30">◇</div>
+    <div class="leading-tight">
+      <span class="block text-[15px] font-bold">RivalTracking</span>
+      <span class="mt-0.5 block text-[10px] text-muted-foreground">rivaltracking.com</span>
+    </div>
+  </div>
+</div>
+
+<div class="min-h-0 flex-1 overflow-auto px-2 py-1">
+  <ul class="flex w-full min-w-0 flex-col gap-1">
+    {% for item in nav_items %}
+    <li class="group/menu-item relative">
+      <a href="{{ item.url }}" @click="$store.ui.sidebarOpen = false"
+         class="flex h-9 w-full items-center gap-2.5 overflow-hidden rounded-lg px-2 text-left text-[13px] font-semibold outline-hidden transition-colors focus-visible:ring-2 focus-visible:ring-sidebar-ring {% if item.active %}bg-sidebar-accent font-medium text-accent-foreground{% else %}text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground{% endif %}">
+        {% icon item.icon class="size-4 shrink-0" %}
+        <span class="truncate">{{ item.label }}</span>
+      </a>
+      {% if item.label == "Alerts" %}{% include "partials/sidebar_badge.html" with badge_id=badge_id %}{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="shrink-0 p-3">
+  <div class="rounded-xl border bg-background p-3">
+    <div class="mb-2.5 flex items-center gap-1.5 text-xs font-bold">
+      {% icon "zap" class="size-3.5 text-primary" %}
+      Daily Intelligence
+    </div>
+    <div class="flex items-center justify-between py-1 text-[11px] text-muted-foreground"><span>New products</span><span class="font-bold text-foreground">37</span></div>
+    <div class="flex items-center justify-between py-1 text-[11px] text-muted-foreground"><span>Price reductions</span><span class="font-bold text-foreground">64</span></div>
+    <div class="flex items-center justify-between py-1 text-[11px] text-muted-foreground"><span>Now out of stock</span><span class="font-bold text-foreground">31</span></div>
+    <div class="flex items-center justify-between py-1 text-[11px] text-muted-foreground"><span>New promotions</span><span class="font-bold text-foreground">7</span></div>
+  </div>
+</div>

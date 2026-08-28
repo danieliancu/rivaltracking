@@ -1,0 +1,71 @@
+{% extends "components/sheet_shell.html" %}
+{% load ui %}
+
+{% block sheet_content %}
+<div class="flex flex-col gap-1.5 p-4 pb-3">
+  <h2 class="text-base font-bold">{{ event.product.name }}</h2>
+  <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+    {% change_badge event.kind event.label %}
+    {% impact_badge event.impact %}
+  </div>
+</div>
+
+<div class="flex flex-col gap-4 px-4 pb-6">
+  <div class="rounded-xl border p-3.5">
+    {% if event.difference and event.secondary %}
+      {% change_value event.previous event.current event.difference|add:" · "|add:event.secondary event.secondary_tone|default:"muted" %}
+    {% elif event.difference %}
+      {% change_value event.previous event.current event.difference event.secondary_tone|default:"muted" %}
+    {% elif event.secondary %}
+      {% change_value event.previous event.current event.secondary event.secondary_tone|default:"muted" %}
+    {% else %}
+      {% change_value event.previous event.current %}
+    {% endif %}
+  </div>
+
+  <div class="grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs">
+    <div><span class="block text-[11px] text-muted-foreground">Competitor</span><span class="mt-0.5 block font-medium">{{ event.competitor }}</span></div>
+    <div><span class="block text-[11px] text-muted-foreground">Category</span><span class="mt-0.5 block font-medium">{{ event.category }}</span></div>
+    <div><span class="block text-[11px] text-muted-foreground">Detected</span><span class="mt-0.5 block font-medium">{{ event.detected_at }}</span></div>
+    <div><span class="block text-[11px] text-muted-foreground">First seen at new value</span><span class="mt-0.5 block font-medium">{{ event.first_seen_at }}</span></div>
+    <div><span class="block text-[11px] text-muted-foreground">Last confirmed</span><span class="mt-0.5 block font-medium">{{ event.last_confirmed_at }}</span></div>
+  </div>
+
+  <div>
+    <p class="mb-2 text-xs font-bold">Change Evidence</p>
+    <div class="flex flex-col gap-2.5 sm:flex-row">
+      {% include "changes/partials/snapshot_panel.html" with title="Previous snapshot" snapshot=event.evidence.previous changed=event.evidence.changed_field highlight="bg-warning/10" %}
+      {% include "changes/partials/snapshot_panel.html" with title="Current snapshot" snapshot=event.evidence.current changed=event.evidence.changed_field highlight="bg-success/10" %}
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2">
+    {% if event.source_url %}
+    <a href="{{ event.source_url }}" target="_blank" rel="noopener noreferrer"
+       class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "external-link" class="size-3.5" %} View source product
+    </a>
+    {% else %}
+    <span class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold opacity-50 shadow-xs">
+      {% icon "external-link" class="size-3.5" %} View source product
+    </span>
+    {% endif %}
+    <span class="flex items-center gap-1 text-[11px] text-muted-foreground">{% icon "clock-3" class="size-3" %} Last successfully scanned: {{ event.last_scanned }}</span>
+  </div>
+
+  <a href="{% url 'products:detail' event.product.slug %}"
+     class="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg px-2 text-xs font-bold text-primary transition-colors hover:bg-accent">
+    View full product history {% icon "arrow-right" class="size-3.5" %}
+  </a>
+
+  <div class="bg-ai-subtle flex items-start gap-2.5 rounded-xl border border-purple/20 p-3.5">
+    <span class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-purple/10 text-purple">{% icon "sparkles" class="size-3.5" %}</span>
+    <div class="min-w-0 flex-1">
+      <p class="text-xs font-bold">Why this may matter</p>
+      <p class="mt-1 text-[11px] leading-relaxed text-foreground/70">{{ event.ai_note }}</p>
+      <a href="{% url 'ai:index' %}?competitor={{ event.competitor|urlencode }}&product={{ event.product.name|urlencode }}&prompt=Explain this change"
+         class="mt-2.5 inline-flex h-7 items-center justify-center rounded-lg bg-primary px-2.5 text-[11px] font-bold text-primary-foreground transition-colors hover:bg-primary/90">Ask AI</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

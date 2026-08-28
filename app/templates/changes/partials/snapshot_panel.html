@@ -1,0 +1,18 @@
+{# One evidence snapshot column (Price / Stock / Promotion), the changed field highlighted. #}
+<div class="min-w-0 flex-1 rounded-xl border p-3">
+  <p class="mb-2 text-[11px] font-bold text-muted-foreground">{{ title }}</p>
+  <div class="flex flex-col gap-1">
+    <div class="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-xs {% if changed == "price" %}{{ highlight }}{% endif %}">
+      <span class="text-muted-foreground">Price</span>
+      <span class="font-medium {% if changed == "price" %}text-foreground{% else %}text-foreground/70{% endif %}">{{ snapshot.price }}</span>
+    </div>
+    <div class="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-xs {% if changed == "stock" %}{{ highlight }}{% endif %}">
+      <span class="text-muted-foreground">Stock</span>
+      <span class="font-medium {% if changed == "stock" %}text-foreground{% else %}text-foreground/70{% endif %}">{{ snapshot.stock }}</span>
+    </div>
+    <div class="flex items-center justify-between gap-2 rounded-md px-1.5 py-1 text-xs {% if changed == "promotion" %}{{ highlight }}{% endif %}">
+      <span class="text-muted-foreground">Promotion</span>
+      <span class="font-medium {% if changed == "promotion" %}text-foreground{% else %}text-foreground/70{% endif %}">{{ snapshot.promotion }}</span>
+    </div>
+  </div>
+</div>

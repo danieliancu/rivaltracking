@@ -1,0 +1,6 @@
+{% load static ui %}{% if image %}
+<img src="{% static image %}" alt="{{ name }}" loading="lazy"
+     class="{{ box_class }} shrink-0 rounded-lg border bg-muted object-cover" style="aspect-ratio: 1 / 1">
+{% else %}
+<span class="flex {{ box_class }} shrink-0 items-center justify-center rounded-lg {{ tone_class }}">{% icon icon class=glyph_class %}</span>
+{% endif %}

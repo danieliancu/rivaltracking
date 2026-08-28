@@ -1,0 +1,43 @@
+{% load ui %}{# Grouped results for the header search palette (cmdk-style). #}
+<div class="p-1">
+  {% if not results.competitors and not results.products and not results.categories %}
+  <div class="py-6 text-center text-sm">No results for “{{ query }}”.</div>
+  {% endif %}
+
+  {% if results.competitors %}
+  <div class="overflow-hidden p-1 text-foreground">
+    <div class="px-2 py-1.5 text-xs font-medium text-muted-foreground">Competitors</div>
+    {% for c in results.competitors %}
+    <a href="{% url 'competitors:detail' c.slug %}"
+       class="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+      {% icon "boxes" class="size-4 shrink-0 text-muted-foreground" %} {{ c.name }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results.products %}
+  <div class="overflow-hidden p-1 text-foreground">
+    <div class="px-2 py-1.5 text-xs font-medium text-muted-foreground">Products</div>
+    {% for p in results.products %}
+    <a href="{% url 'products:detail' p.slug %}"
+       class="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+      {% icon "package" class="size-4 shrink-0 text-muted-foreground" %} {{ p.name }}
+      <span class="ml-auto text-[10px] text-muted-foreground">{{ p.sku }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if results.categories %}
+  <div class="overflow-hidden p-1 text-foreground">
+    <div class="px-2 py-1.5 text-xs font-medium text-muted-foreground">Categories</div>
+    {% for c in results.categories %}
+    <a href="{% url 'products:index' %}?category={{ c.param }}"
+       class="relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+      {% icon "tags" class="size-4 shrink-0 text-muted-foreground" %} {{ c.name }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

@@ -1,0 +1,13 @@
+{% load ui %}<div class="flex items-center justify-between border-t px-4 py-2.5">
+  <span class="text-[10px] text-muted-foreground">{{ page.from }}–{{ page.to }} of {{ page.total }} {{ noun }}</span>
+  <div class="flex items-center gap-1.5">
+    <button type="button" {% if page.page <= 1 %}disabled{% endif %}
+            hx-get="?{{ prev_qs }}" hx-target="closest [data-table-fragment]" hx-swap="outerHTML" hx-push-url="true"
+            class="inline-flex size-7 items-center justify-center rounded-lg border bg-background shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+            aria-label="Previous page">{% icon "chevron-left" class="size-3.5" %}</button>
+    <button type="button" {% if page.page >= page.page_count %}disabled{% endif %}
+            hx-get="?{{ next_qs }}" hx-target="closest [data-table-fragment]" hx-swap="outerHTML" hx-push-url="true"
+            class="inline-flex size-7 items-center justify-center rounded-lg border bg-background shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+            aria-label="Next page">{% icon "chevron-right" class="size-3.5" %}</button>
+  </div>
+</div>

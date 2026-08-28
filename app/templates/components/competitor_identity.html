@@ -1,0 +1,7 @@
+{% load ui %}<div class="flex items-center gap-2.5">
+  <span class="flex size-8.5 shrink-0 items-center justify-center rounded-full {{ tone_class }}">{% icon "store" class="size-4" %}</span>
+  <span class="min-w-0">
+    <span class="block truncate text-sm font-medium text-foreground">{{ name }}</span>
+    {% if url %}<span class="mt-0.5 block truncate text-[11px] text-muted-foreground">{{ url }}</span>{% endif %}
+  </span>
+</div>

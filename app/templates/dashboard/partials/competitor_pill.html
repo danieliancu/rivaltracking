@@ -1,0 +1,26 @@
+{% load ui %}{# Overview competitor context picker (dropdown pill). #}
+<div id="competitor-pill" {% if oob %}hx-swap-oob="true"{% endif %} class="relative" x-data="menu()" @click.outside="close()">
+  <button type="button" @click="toggle()"
+          class="inline-flex h-10 items-center justify-center gap-2 rounded-full border bg-card pl-1.5 pr-4 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground">
+    <span class="flex size-7 items-center justify-center rounded-full bg-accent text-accent-foreground">{% icon "store" class="size-3.5" %}</span>
+    <span class="text-xs font-bold">{{ competitor.name }}</span>
+    <span class="hidden items-center justify-center rounded-full border border-transparent bg-secondary px-2 py-0.5 text-[10px] font-bold text-muted-foreground sm:inline-flex">{{ competitor.market }}</span>
+    {% icon "chevron-down" class="size-4 text-muted-foreground" %}
+  </button>
+  <div x-show="open" x-cloak x-transition.opacity.duration.100ms @keydown.escape.window="close()"
+       class="absolute right-0 top-12 z-50 w-64 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+    <div class="px-2 py-1.5 text-xs font-medium text-muted-foreground">Monitored competitors</div>
+    {% for c in competitors %}
+    <button type="button" @click="close()"
+            hx-post="{% url 'dashboard:select_competitor' %}" hx-vals='{"slug": "{{ c.slug }}"}'
+            hx-target="#overview-changes" hx-swap="innerHTML"
+            class="flex w-full cursor-pointer select-none items-center justify-between gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+      <span>
+        <span class="block text-xs font-bold">{{ c.name }}</span>
+        <span class="mt-0.5 block text-[10px] text-muted-foreground">{{ c.market }}</span>
+      </span>
+      {% if c.slug == competitor.slug %}{% icon "check" class="size-4" %}{% endif %}
+    </button>
+    {% endfor %}
+  </div>
+</div>

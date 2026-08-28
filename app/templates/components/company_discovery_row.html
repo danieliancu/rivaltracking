@@ -1,0 +1,22 @@
+{% load ui %}{# Company discovery row — shared/company-discovery-row.tsx.
+   Context: d (candidate dict), tone_class. Monitor button swaps this row. #}
+<div class="flex items-center gap-2.5 border-t px-5 py-3" data-discovery-row>
+  <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {{ tone_class }}">{% icon "store" class="size-4" %}</span>
+  <span class="min-w-0 flex-1">
+    <span class="block truncate text-sm font-medium">{{ d.name }}</span>
+    <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ d.match }}% match</span>
+  </span>
+  {% if d.status == "monitoring" %}
+  <button type="button" disabled
+          class="inline-flex h-7 items-center justify-center gap-2 rounded-lg border border-success/30 bg-success/10 px-2.5 text-[11px] font-bold text-success shadow-xs">
+    {% icon "check" class="size-3.5" %} Monitoring
+  </button>
+  {% else %}
+  <button type="button"
+          hx-post="{% url 'discovery:monitor' d.slug %}" hx-target="closest [data-discovery-row]" hx-swap="outerHTML" hx-indicator="this"
+          class="inline-flex h-7 items-center justify-center gap-2 rounded-lg border bg-background px-2.5 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground [&.htmx-request]:pointer-events-none">
+    <span class="htmx-indicator absolute">{% icon "loader-2" class="size-3.5 animate-spin" %}</span>
+    <span class="[.htmx-request_&]:invisible inline-flex items-center gap-2">{% icon "plus" class="size-3.5" %} Monitor</span>
+  </button>
+  {% endif %}
+</div>
