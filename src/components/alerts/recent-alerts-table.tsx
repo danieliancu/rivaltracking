@@ -189,7 +189,7 @@ export function RecentAlertsTable({
         <EmptyState
           icon={BellOff}
           heading="No alerts triggered yet"
-          text="CompeteIQ will notify you when competitor activity matches one of your rules."
+          text="RivalTracking will notify you when competitor activity matches one of your rules."
         />
       ) : isMobile ? (
         <CardContent className="flex flex-col gap-3 px-4 pb-4">

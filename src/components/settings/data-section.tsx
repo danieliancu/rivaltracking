@@ -46,7 +46,7 @@ export function DataSection() {
   const [confirmPhrase, setConfirmPhrase] = useState("")
 
   const exportData = () => {
-    downloadJson("competeiq-workspace.json", exportWorkspaceSnapshot())
+    downloadJson("rivaltracking-workspace.json", exportWorkspaceSnapshot())
     toast.success("Export ready", {
       description: "Workspace data downloaded as JSON.",
     })
@@ -56,7 +56,7 @@ export function DataSection() {
     <div className="flex flex-col gap-4">
       <SettingsSection
         title="Data & Privacy"
-        subtitle="Manage your CompeteIQ data and retention preferences."
+        subtitle="Manage your RivalTracking data and retention preferences."
       >
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {dataSettings.stats.map((s) => (
@@ -95,7 +95,7 @@ export function DataSection() {
       <SettingsSection title="Competitor monitoring">
         <p className="flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">
           <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-success" />
-          CompeteIQ is designed to monitor information available from publicly
+          RivalTracking is designed to monitor information available from publicly
           accessible competitor pages and configured data sources.
         </p>
       </SettingsSection>

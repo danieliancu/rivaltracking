@@ -20,7 +20,7 @@ export function BillingSection() {
     <div className="flex flex-col gap-4">
       <SettingsSection
         title="Billing"
-        subtitle="Manage your CompeteIQ plan and usage."
+        subtitle="Manage your RivalTracking plan and usage."
       >
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3.5">
           <div className="flex items-center gap-2.5">
@@ -73,7 +73,7 @@ export function BillingSection() {
           ))}
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Plan limits are enforced by CompeteIQ when adding competitors or
+          Plan limits are enforced by RivalTracking when adding competitors or
           increasing scan frequency.
         </p>
       </SettingsSection>

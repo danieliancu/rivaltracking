@@ -193,7 +193,7 @@ export function CreateAlertDialog({
           <DialogDescription className="text-xs">
             {editRule
               ? `Adjust what "${editRule.name}" watches for.`
-              : "Choose what CompeteIQ should watch for."}
+              : "Choose what RivalTracking should watch for."}
           </DialogDescription>
         </DialogHeader>
 
@@ -357,7 +357,7 @@ export function CreateAlertDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="app" className="text-xs">
-                  In CompeteIQ
+                  In RivalTracking
                 </SelectItem>
                 <SelectItem value="email" disabled className="text-xs">
                   Email — coming later

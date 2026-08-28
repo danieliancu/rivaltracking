@@ -65,9 +65,9 @@ export function AppSidebar() {
             ◇
           </div>
           <div className="leading-tight">
-            <span className="block text-[15px] font-bold">CompeteIQ</span>
+            <span className="block text-[15px] font-bold">RivalTracking</span>
             <span className="mt-0.5 block text-[10px] text-muted-foreground">
-              Competitor Intelligence
+              rivaltracking.com
             </span>
           </div>
         </div>

@@ -28,7 +28,7 @@ export function reportCsv(report: GeneratedReport): {
     `promos=${c.promos}`,
   ])
   return {
-    filename: `competeiq-report-${report.id}.csv`,
+    filename: `rivaltracking-report-${report.id}.csv`,
     headers: ["Section", "Item", "Value", "", "", "", "", ""],
     rows: [...meta, ...metrics, ...comparison],
   }

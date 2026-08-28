@@ -97,7 +97,7 @@ export function ScheduleReportDialog({
             {schedule ? "Edit scheduled report" : "Schedule report"}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            CompeteIQ will generate this report automatically.
+            RivalTracking will generate this report automatically.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3.5">
@@ -171,7 +171,7 @@ export function ScheduleReportDialog({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="app" className="text-xs">
-                  Available in CompeteIQ
+                  Available in RivalTracking
                 </SelectItem>
                 <SelectItem value="email" disabled className="text-xs">
                   Email — coming soon

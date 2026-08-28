@@ -98,7 +98,7 @@ export function TeamSection() {
         <CardHeader className="pb-4">
           <CardTitle className="text-sm font-bold">Team</CardTitle>
           <CardDescription className="text-xs">
-            Manage who can access this CompeteIQ workspace.
+            Manage who can access this RivalTracking workspace.
           </CardDescription>
           <CardAction>
             <Button

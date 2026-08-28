@@ -1,6 +1,6 @@
-# CompeteIQ Dashboard
+# RivalTracking Dashboard
 
-Local export/reconstruction of the CompeteIQ dashboard created in Lovable.
+Local export/reconstruction of the RivalTracking dashboard created in Lovable.
 
 ## Run locally
 

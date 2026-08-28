@@ -20,7 +20,7 @@ export function MonitoringSection() {
     <div className="flex flex-col gap-4">
       <SettingsSection
         title="Monitoring"
-        subtitle="Control how often CompeteIQ checks monitored competitors."
+        subtitle="Control how often RivalTracking checks monitored competitors."
       >
         <div className="max-w-xs">
           <FormField
@@ -38,7 +38,7 @@ export function MonitoringSection() {
         />
         <ToggleRow
           label="Spread scans automatically"
-          description="CompeteIQ can distribute scans throughout the day to improve reliability and reduce unnecessary load. Recommended."
+          description="RivalTracking can distribute scans throughout the day to improve reliability and reduce unnecessary load. Recommended."
           checked={settings.spreadScans}
           onChange={(c) => setSettings((s) => ({ ...s, spreadScans: c }))}
         />
@@ -46,7 +46,7 @@ export function MonitoringSection() {
 
       <SettingsSection
         title="Monitoring scope"
-        subtitle="Choose what CompeteIQ tracks on competitor product pages."
+        subtitle="Choose what RivalTracking tracks on competitor product pages."
       >
         {Object.entries(settings.scope).map(([key, on]) => (
           <ToggleRow
@@ -96,7 +96,7 @@ export function MonitoringSection() {
         </div>
         <ToggleRow
           label="Confirm removed products before reporting them"
-          description="CompeteIQ verifies that temporarily unavailable pages are not incorrectly reported as removed products."
+          description="RivalTracking verifies that temporarily unavailable pages are not incorrectly reported as removed products."
           checked={settings.confirmRemoved}
           onChange={(c) => setSettings((s) => ({ ...s, confirmRemoved: c }))}
         />

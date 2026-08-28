@@ -20,7 +20,7 @@ export function AISection() {
       >
         <ToggleRow
           label="AI analysis"
-          description="Allow CompeteIQ to interpret verified competitor data and highlight patterns, risks and opportunities."
+          description="Allow RivalTracking to interpret verified competitor data and highlight patterns, risks and opportunities."
           checked={settings.aiAnalysis}
           onChange={(c) => setSettings((s) => ({ ...s, aiAnalysis: c }))}
         />
@@ -45,7 +45,7 @@ export function AISection() {
         />
         <ToggleRow
           label="Show supporting evidence with AI insights"
-          description="AI insights link back to CompeteIQ's verified changes, products and analytics wherever possible."
+          description="AI insights link back to RivalTracking's verified changes, products and analytics wherever possible."
           checked={settings.showEvidence}
           onChange={(c) => setSettings((s) => ({ ...s, showEvidence: c }))}
         />
@@ -53,11 +53,11 @@ export function AISection() {
 
       <SettingsSection title="AI data usage">
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          CompeteIQ sends only the relevant structured context needed to answer
+          RivalTracking sends only the relevant structured context needed to answer
           your request rather than your entire competitor database.
         </p>
         <p className="border-t pt-3 text-[11px] leading-relaxed text-muted-foreground">
-          CompeteIQ AI interprets collected competitive data. Strategic
+          RivalTracking AI interprets collected competitive data. Strategic
           interpretations may be uncertain and should be reviewed alongside
           supporting evidence.
         </p>

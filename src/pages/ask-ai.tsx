@@ -182,7 +182,7 @@ export function AskAIPage() {
               variant="outline"
               className="rounded-full border-purple/25 bg-purple/10 px-2 py-0.5 text-[11px] font-bold text-purple"
             >
-              Powered by your CompeteIQ data
+              Powered by your RivalTracking data
             </Badge>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -221,7 +221,7 @@ export function AskAIPage() {
                     What would you like to know?
                   </h2>
                   <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                    Ask CompeteIQ about competitor pricing, products, stock,
+                    Ask RivalTracking about competitor pricing, products, stock,
                     promotions or market activity.
                   </p>
                 </div>

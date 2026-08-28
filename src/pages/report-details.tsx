@@ -483,7 +483,7 @@ export function ReportDetailsPage() {
           ))}
         </ol>
         <p className="text-[11px] text-muted-foreground">
-          CompeteIQ recommends areas to investigate — it does not take business
+          RivalTracking recommends areas to investigate — it does not take business
           actions automatically.
         </p>
       </Card>

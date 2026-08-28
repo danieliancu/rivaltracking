@@ -341,7 +341,7 @@ export function ProductsTable({
   const bulkExport = () => {
     const exportRows = visible.filter((r) => selected[r.slug])
     const csv = productsCsv(exportRows.length > 0 ? exportRows : visible)
-    downloadCsv("competeiq-products.csv", csv.headers, csv.rows)
+    downloadCsv("rivaltracking-products.csv", csv.headers, csv.rows)
     toast.success("Export ready", {
       description: `${csv.rows.length} products exported to CSV.`,
     })

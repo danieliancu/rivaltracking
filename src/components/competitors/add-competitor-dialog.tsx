@@ -108,7 +108,7 @@ export function AddCompetitorDialog({ onView }: { onView: (slug: string) => void
               Monitor a competitor
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Enter a competitor website and CompeteIQ will discover its
+              Enter a competitor website and RivalTracking will discover its
               catalogue automatically.
             </DialogDescription>
           </DialogHeader>
@@ -135,7 +135,7 @@ export function AddCompetitorDialog({ onView }: { onView: (slug: string) => void
                 <p className="text-[11px] font-semibold text-destructive">{error}</p>
               )}
               <p className="text-[11px] leading-relaxed text-muted-foreground">
-                CompeteIQ will detect products, categories, prices, stock and
+                RivalTracking will detect products, categories, prices, stock and
                 promotions from publicly accessible pages.
               </p>
             </div>

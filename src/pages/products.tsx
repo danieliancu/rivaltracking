@@ -46,7 +46,7 @@ export function ProductsPage() {
   const exportFiltered = () => {
     const filters = productFiltersFromParams(searchParams, competitorName)
     const csv = productsCsv(filterProducts(products, filters))
-    downloadCsv("competeiq-products.csv", csv.headers, csv.rows)
+    downloadCsv("rivaltracking-products.csv", csv.headers, csv.rows)
     toast.success("Export ready", {
       description: `${csv.rows.length} products exported to CSV.`,
     })

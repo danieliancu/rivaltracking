@@ -17,7 +17,7 @@ const connections = [
   {
     icon: Globe,
     title: "Website",
-    description: "CompeteIQ crawls your own catalogue like a competitor's.",
+    description: "RivalTracking crawls your own catalogue like a competitor's.",
   },
   {
     icon: Database,

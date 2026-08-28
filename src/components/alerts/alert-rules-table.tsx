@@ -387,7 +387,7 @@ export function AlertRulesTable({
               Delete "{toDelete?.name}"?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs">
-              CompeteIQ will stop watching for this activity. Alerts already
+              RivalTracking will stop watching for this activity. Alerts already
               triggered by this rule are kept.
             </AlertDialogDescription>
           </AlertDialogHeader>

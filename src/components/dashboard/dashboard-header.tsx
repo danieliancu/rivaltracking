@@ -256,7 +256,7 @@ export function DashboardHeader() {
           <DropdownMenuLabel>
             <span className="block text-sm font-semibold">Dani Iancu</span>
             <span className="block text-[11px] font-normal text-muted-foreground">
-              dani@competeiq.io
+              dani@rivaltracking.com
             </span>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />

@@ -20,7 +20,7 @@ export function NotificationsSection() {
     <div className="flex flex-col gap-4">
       <SettingsSection
         title="Notifications"
-        subtitle="Choose how CompeteIQ keeps you informed."
+        subtitle="Choose how RivalTracking keeps you informed."
       >
         <ToggleRow
           label="In-app notifications"

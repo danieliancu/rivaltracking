@@ -176,7 +176,7 @@ export function GeneratedReportsTable({
         <EmptyState
           icon={FileText}
           heading="No reports yet"
-          text="Create your first intelligence report from the competitor data CompeteIQ has collected."
+          text="Create your first intelligence report from the competitor data RivalTracking has collected."
           actionLabel="Create report"
           onAction={onCreate}
         />

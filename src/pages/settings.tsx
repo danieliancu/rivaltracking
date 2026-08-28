@@ -64,7 +64,7 @@ export function SettingsPage() {
       <section>
         <h1 className="text-2xl font-extrabold tracking-tight">Settings</h1>
         <p className="mt-1 text-xs text-muted-foreground">
-          Configure how CompeteIQ works for your company.
+          Configure how RivalTracking works for your company.
         </p>
       </section>
 

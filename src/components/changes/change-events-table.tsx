@@ -314,7 +314,7 @@ export function ChangeEventsTable({
 
   const bulkExport = () => {
     const csv = changesCsv(selectedEvents.length > 0 ? selectedEvents : visible)
-    downloadCsv("competeiq-changes.csv", csv.headers, csv.rows)
+    downloadCsv("rivaltracking-changes.csv", csv.headers, csv.rows)
     toast.success("Export ready", {
       description: `${csv.rows.length} changes exported to CSV.`,
     })

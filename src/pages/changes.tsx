@@ -62,7 +62,7 @@ export function ChangesPage() {
   const exportFiltered = () => {
     const filters = changeFiltersFromParams(searchParams, competitorName)
     const csv = changesCsv(filterChanges(changeEvents, filters))
-    downloadCsv("competeiq-changes.csv", csv.headers, csv.rows)
+    downloadCsv("rivaltracking-changes.csv", csv.headers, csv.rows)
     toast.success("Export ready", {
       description: `${csv.rows.length} changes exported to CSV.`,
     })

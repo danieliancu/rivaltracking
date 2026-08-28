@@ -92,7 +92,7 @@ export function ScheduledReports({
         <EmptyState
           icon={CalendarClock}
           heading="No scheduled reports"
-          text="Schedule a report and CompeteIQ will generate it automatically."
+          text="Schedule a report and RivalTracking will generate it automatically."
           actionLabel="Schedule report"
           onAction={openNew}
         />
