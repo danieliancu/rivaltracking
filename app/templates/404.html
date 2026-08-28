@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="rounded-xl border bg-card text-card-foreground shadow-sm">
+  <div class="flex flex-col items-center gap-1.5 px-6 py-12 text-center">
+    <p class="text-sm font-bold">Page not found</p>
+    <p class="max-w-xs text-xs text-muted-foreground">The page you are looking for does not exist or has moved.</p>
+    <a href="/" class="mt-3 inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-primary/90">Back to overview</a>
+  </div>
+</div>
+{% endblock %}
