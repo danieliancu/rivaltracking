@@ -1,0 +1,6 @@
+{% load ui %}{% if row.matched %}<button type="button" @click.stop
+        hx-get="{% url 'products:compare_drawer' row.slug %}" hx-target="#drawer-root" hx-swap="innerHTML"
+        class="inline-flex w-fit shrink-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full border border-info/25 bg-info/10 px-2 py-0.5 text-[11px] font-bold text-info hover:bg-info/15">
+  {% icon "git-compare-arrows" class="size-2.5" %}
+  {{ row.matched.count }} competitors
+</button>{% endif %}

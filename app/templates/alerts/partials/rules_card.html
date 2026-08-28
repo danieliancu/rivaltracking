@@ -1,0 +1,24 @@
+{% load ui %}{# alert-rules-table.tsx — card, header toolbar (static) + table fragment. #}
+<section class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+  <div class="grid grid-cols-[1fr_auto] items-start gap-3 px-6 pb-4 max-md:grid-cols-1">
+    <div class="flex flex-col gap-1.5">
+      <h2 class="text-sm font-bold leading-none">Alert Rules</h2>
+      <p class="text-xs text-muted-foreground">Your monitoring rules for competitor activity.</p>
+    </div>
+    <form id="alert-rules-filter-form"
+          hx-get="{% url 'alerts:index' %}" hx-target="#alert-rules-fragment" hx-swap="outerHTML"
+          hx-push-url="true" hx-trigger="input delay:300ms from:find input, change" hx-include="this"
+          class="flex flex-wrap items-center gap-2 max-md:justify-start md:justify-end">
+      <div class="relative">
+        {% icon "search" class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" %}
+        <input name="q" value="{{ filters.q }}" placeholder="Search alerts..." autocomplete="off"
+               class="h-8 w-44 rounded-md border border-input bg-transparent py-1 pl-8 pr-3 text-[11px] shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+      </div>
+      {% filter_select "status" filter_options.statuses filters.status aria_label="Filter by status" %}
+      {% filter_select "type" filter_options.types filters.type aria_label="Filter by type" %}
+      {% filter_select "competitor" competitor_options filters.competitor aria_label="Filter by competitor" %}
+      {% filter_select "sort" filter_options.sorts filters.sort aria_label="Sort rules" %}
+    </form>
+  </div>
+  {% include "alerts/partials/rules_table.html" %}
+</section>

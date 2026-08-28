@@ -1,0 +1,21 @@
+{% load ui %}{# Report Library — reports/report-library.tsx. Context: library. #}
+<section class="flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm">
+  <div class="flex flex-col gap-1.5 px-6">
+    <h2 class="text-sm font-bold leading-none">Report Library</h2>
+    <p class="text-xs text-muted-foreground">Generate focused reports from your competitor data.</p>
+  </div>
+  <div class="grid gap-3.5 px-6 md:grid-cols-2 xl:grid-cols-3">
+    {% for t in library %}
+    <button type="button"
+            hx-get="{% url 'reports:create_dialog' %}?type={{ t.id }}" hx-target="#modal-root" hx-swap="innerHTML"
+            class="flex flex-col gap-2.5 rounded-xl border bg-card p-4 text-left transition-shadow hover:border-primary/30 hover:shadow-md">
+      <div class="flex items-center gap-2.5">
+        <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {{ t.tone }}">{% icon t.icon class="size-4" %}</span>
+        <span class="text-sm font-medium">{{ t.title }}</span>
+      </div>
+      <p class="text-[11px] leading-relaxed text-muted-foreground">{{ t.description }}</p>
+      <p class="text-[11px] text-muted-foreground/70">Includes: {{ t.includes|join:" · " }}</p>
+    </button>
+    {% endfor %}
+  </div>
+</section>

@@ -1,0 +1,11 @@
+{% load ui %}{# Clear-filters button (only when active filters > 0); the fragment
+   response re-renders it out-of-band so the count stays live. #}
+<span id="products-clear-filters"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+  {% if active_filters > 0 %}
+  <a href="{{ table_url }}"
+     class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border bg-background px-3 text-[10px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+    {% icon "filter-x" class="size-3.5" %} Clear filters
+    <span class="inline-flex size-4.5 items-center justify-center rounded-full bg-primary p-0 text-[11px] font-bold text-primary-foreground">{{ active_filters }}</span>
+  </a>
+  {% endif %}
+</span>

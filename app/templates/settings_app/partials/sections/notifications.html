@@ -1,0 +1,47 @@
+{% load ui %}{# notifications-section.tsx #}
+{% url 'settings_app:save' 'notifications' as save_url %}
+<div class="flex flex-col gap-4">
+  {% include "settings_app/partials/section_card_start.html" with title="Notifications" subtitle="Choose how RivalTracking keeps you informed." %}
+    <div class="contents" x-data="{ on: {{ n.in_app|yesno:'true,false' }} }">
+      {% include "settings_app/partials/toggle_row.html" with label="In-app notifications" description=None name="in_app" checked=n.in_app post_url=save_url model="on" %}
+      <div x-show="on" {% if not n.in_app %}style="display: none"{% endif %} class="flex flex-col gap-3 border-l-2 border-border pl-4">
+        {% for item in priority_items %}
+          {% include "settings_app/partials/toggle_row.html" with label=item.label description=None name="priorities."|add:item.key checked=item.checked post_url=save_url model=None %}
+        {% endfor %}
+      </div>
+    </div>
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Email notifications" subtitle=None %}
+    <div class="contents" x-data="{ on: {{ n.email|yesno:'true,false' }} }">
+      {% include "settings_app/partials/toggle_row.html" with label="Email notifications" description=None name="email" checked=n.email post_url=save_url model="on" %}
+      <div x-show="on" {% if not n.email %}style="display: none"{% endif %} class="flex flex-col gap-3 border-l-2 border-border pl-4">
+        <div class="max-w-xs">
+          {% include "settings_app/partials/form_field.html" with label="Email" name="email_address" value=n.email_address post_url=save_url %}
+        </div>
+        {% for item in email_option_items %}
+          {% include "settings_app/partials/toggle_row.html" with label=item.label description=None name="email_options."|add:item.key checked=item.checked post_url=save_url model=None %}
+        {% endfor %}
+        <div class="grid max-w-md grid-cols-3 gap-2">
+          {% include "settings_app/partials/form_field.html" with label="Daily digest" name="digest_time" value=n.digest_time options=time_options post_url=save_url %}
+          {% include "settings_app/partials/form_field.html" with label="Weekly report" name="weekly_day" value=n.weekly_day options=day_options post_url=save_url %}
+          {% include "settings_app/partials/form_field.html" with label="Time" name="weekly_time" value=n.weekly_time options=time_options post_url=save_url %}
+        </div>
+        <p class="text-[11px] text-muted-foreground">Times use your workspace timezone (Europe/London).</p>
+      </div>
+    </div>
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Slack" subtitle=None %}
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <span class="flex items-center gap-2">
+        <span class="inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-bold text-muted-foreground">Not connected</span>
+        <span class="inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full border border-info/25 bg-info/10 px-2 py-1 text-[11px] font-bold text-info">Coming soon</span>
+      </span>
+      <button type="button" disabled
+              class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50">
+        {% icon "slack" class="size-3.5" %} Connect Slack
+      </button>
+    </div>
+  {% include "settings_app/partials/section_card_end.html" %}
+</div>

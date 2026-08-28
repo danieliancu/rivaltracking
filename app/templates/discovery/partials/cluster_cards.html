@@ -1,0 +1,16 @@
+{% load ui %}{# Cluster filter cards — discovery.tsx. Plain links toggle ?cluster=<id>;
+   the section re-fetches live counts on discovery:changed (staged run dialog),
+   or is OOB-swapped by dismiss / not-relevant responses. #}
+<section id="discovery-clusters" class="grid grid-cols-1 gap-3.5 sm:grid-cols-3"
+         {% if oob_clusters %}hx-swap-oob="outerHTML"{% endif %}
+         hx-get="{% url 'discovery:index' %}{{ cluster_qs }}"
+         hx-trigger="discovery:changed from:body" hx-target="this" hx-swap="outerHTML">
+  {% for c in clusters %}
+  <a href="{% url 'discovery:index' %}{% if not c.active %}?cluster={{ c.id|urlencode }}{% endif %}"
+     role="button" aria-label="Filter by {{ c.label }}"
+     class="flex cursor-pointer flex-col gap-0 rounded-xl border bg-card p-4 text-card-foreground shadow-sm transition-shadow hover:shadow-md{% if c.active %} border-primary/40 bg-accent/40{% endif %}">
+    <span class="block text-sm font-bold">{{ c.label }}</span>
+    <span class="mt-0.5 block text-[11px] font-semibold text-muted-foreground">{{ c.count }} potential competitor{{ c.count|pluralize }}</span>
+  </a>
+  {% endfor %}
+</section>

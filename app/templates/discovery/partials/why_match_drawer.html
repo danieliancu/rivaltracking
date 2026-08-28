@@ -1,0 +1,54 @@
+{% extends "components/sheet_shell.html" %}
+{% load ui %}
+{# Why-match drawer — why-match-drawer.tsx. Context: d, products_display, cluster_qs. #}
+
+{% block sheet_content %}
+<div class="flex flex-col gap-1.5 p-4 pb-3">
+  <h2 class="text-base font-bold">{{ d.name }}</h2>
+  <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+    Why this match?
+    <span class="inline-flex w-fit shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-info/25 bg-info/10 px-2 py-0.5 text-[11px] font-bold text-info">{{ d.match }}% match</span>
+  </div>
+</div>
+
+<div class="flex flex-col gap-4 px-4 pb-6">
+  <div class="rounded-xl border p-3.5">
+    <p class="mb-2 text-xs font-bold">Match evidence</p>
+    <div class="flex flex-col gap-2">
+      {% for reason in d.why_match %}
+      <div class="flex items-start gap-2 text-[11px] leading-relaxed text-foreground/80">
+        {% icon "check" class="mt-0.5 size-3.5 shrink-0 text-success" %}
+        {{ reason }}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="rounded-xl border p-3.5">
+    <p class="mb-2 flex items-center gap-1.5 text-xs font-bold">{% icon "store" class="size-3.5 text-muted-foreground" %} Catalogue profile</p>
+    <div class="grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs">
+      <div>
+        <span class="block text-[11px] text-muted-foreground">Products</span>
+        <span class="mt-0.5 block font-medium">{{ products_display }}</span>
+      </div>
+      <div>
+        <span class="block text-[11px] text-muted-foreground">Price band</span>
+        <span class="mt-0.5 block font-medium">{{ d.catalogue_profile.price_band }}</span>
+      </div>
+      <div class="col-span-2">
+        <span class="block text-[11px] text-muted-foreground">Top categories</span>
+        <span class="mt-0.5 block font-medium">{% for c in d.catalogue_profile.categories %}{{ c.name }} ({{ c.count }}){% if not forloop.last %} · {% endif %}{% endfor %}</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-[11px] leading-relaxed text-muted-foreground">This profile comes from the discovery comparison. Price and stock history become available after monitoring starts.</p>
+
+  {% if d.status != "monitoring" %}
+  <button type="button" @click="close()"
+          hx-post="{% url 'discovery:monitor' d.slug %}{{ cluster_qs }}" hx-vals='{"variant": "page"}'
+          hx-target="#discovery-row-{{ d.slug }}" hx-swap="outerHTML"
+          class="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90">Monitor {{ d.name }}</button>
+  {% endif %}
+</div>
+{% endblock %}

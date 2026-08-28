@@ -1,0 +1,30 @@
+{# reports-section.tsx #}
+{% url 'settings_app:save' 'reports' as save_url %}
+<div class="flex flex-col gap-4">
+  {% include "settings_app/partials/section_card_start.html" with title="Reports" subtitle="Set defaults for generated intelligence reports." %}
+    <div class="grid gap-4 sm:grid-cols-2">
+      {% include "settings_app/partials/form_field.html" with label="Default report period" name="period" value=r.period options=period_options post_url=save_url %}
+      {% include "settings_app/partials/form_field.html" with label="Default competitors" name="competitors" value=r.competitors options=competitor_options post_url=save_url %}
+    </div>
+    {% include "settings_app/partials/toggle_row.html" with label="Include AI analysis by default" description=None name="ai_by_default" checked=r.ai_by_default post_url=save_url %}
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Report detail" subtitle=None %}
+    {% include "settings_app/partials/radio_cards.html" with options=detail_options name="detail" value=r.detail post_url=save_url %}
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Report branding" subtitle="Shown on exported PDF reports." %}
+    <div class="max-w-xs">
+      {% include "settings_app/partials/form_field.html" with label="Company name" name="branding_name" value=r.branding_name post_url=save_url %}
+    </div>
+    <p class="text-[11px] text-muted-foreground">Logo upload — coming later.</p>
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Scheduled report defaults" subtitle="Used when scheduling new reports." %}
+    <div class="grid max-w-md grid-cols-3 gap-2">
+      {% include "settings_app/partials/form_field.html" with label="Daily intelligence" name="daily_time" value=r.daily_time options=daily_time_options post_url=save_url %}
+      {% include "settings_app/partials/form_field.html" with label="Weekly intelligence" name="weekly_day" value=r.weekly_day options=weekly_day_options post_url=save_url %}
+      {% include "settings_app/partials/form_field.html" with label="Time" name="weekly_time" value=r.weekly_time options=weekly_time_options post_url=save_url %}
+    </div>
+  {% include "settings_app/partials/section_card_end.html" %}
+</div>

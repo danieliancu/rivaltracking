@@ -1,0 +1,12 @@
+{% load ui %}{# connect-catalogue-dialog.tsx connection row (all honestly disabled).
+   Context: icon, row_title, description. #}
+<div class="flex items-center gap-2.5 rounded-xl border p-3 opacity-80">
+  <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+    {% icon icon class="size-4" %}
+  </span>
+  <span class="min-w-0 flex-1">
+    <span class="block text-xs font-bold">{{ row_title }}</span>
+    <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ description }}</span>
+  </span>
+  <span class="inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full border border-info/25 bg-info/10 px-2 py-0.5 text-[11px] font-bold text-info">Coming soon</span>
+</div>

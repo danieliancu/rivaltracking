@@ -1,0 +1,19 @@
+{# ai-section.tsx #}
+{% url 'settings_app:save' 'ai' as save_url %}
+<div class="flex flex-col gap-4">
+  {% include "settings_app/partials/section_card_start.html" with title="AI" subtitle="Control how AI-assisted intelligence is presented." %}
+    {% include "settings_app/partials/toggle_row.html" with label="AI analysis" description="Allow RivalTracking to interpret verified competitor data and highlight patterns, risks and opportunities." name="ai_analysis" checked=ai.ai_analysis post_url=save_url %}
+    {% include "settings_app/partials/toggle_row.html" with label="Include AI analysis in reports by default" description=None name="ai_in_reports" checked=ai.ai_in_reports post_url=save_url %}
+    {% include "settings_app/partials/toggle_row.html" with label="Add AI explanation to important alerts" description="Alerts are always triggered by your rules and verified data — AI only explains why they may matter." name="ai_in_alerts" checked=ai.ai_in_alerts post_url=save_url %}
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="AI recommendations" subtitle=None %}
+    {% include "settings_app/partials/radio_cards.html" with options=style_options name="style" value=ai.style post_url=save_url %}
+    {% include "settings_app/partials/toggle_row.html" with label="Show supporting evidence with AI insights" description="AI insights link back to RivalTracking's verified changes, products and analytics wherever possible." name="show_evidence" checked=ai.show_evidence post_url=save_url %}
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="AI data usage" subtitle=None %}
+    <p class="text-[11px] leading-relaxed text-muted-foreground">RivalTracking sends only the relevant structured context needed to answer your request rather than your entire competitor database.</p>
+    <p class="border-t pt-3 text-[11px] leading-relaxed text-muted-foreground">RivalTracking AI interprets collected competitive data. Strategic interpretations may be uncertain and should be reviewed alongside supporting evidence.</p>
+  {% include "settings_app/partials/section_card_end.html" %}
+</div>

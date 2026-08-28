@@ -1,0 +1,64 @@
+{% load ui %}{# Rich Discovery-page result row — discovery.tsx (the dashboard uses
+   components/company_discovery_row.html instead). Context: d, cluster_qs. #}
+<div id="discovery-row-{{ d.slug }}" data-page-discovery-row class="flex items-center gap-2.5 border-t px-5 py-3">
+  <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {{ d|discovery_tone }}">{% icon "store" class="size-4" %}</span>
+  <button type="button" aria-label="Why is {{ d.name }} a match?"
+          hx-get="{% url 'discovery:why_match' d.slug %}{{ cluster_qs }}" hx-target="#drawer-root" hx-swap="innerHTML"
+          class="min-w-0 flex-1 text-left">
+    <span class="block truncate text-sm font-medium hover:text-primary">{{ d.name }}</span>
+    <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ d.match }}% match · {{ d.cluster }}</span>
+  </button>
+  <button type="button"
+          hx-get="{% url 'discovery:why_match' d.slug %}{{ cluster_qs }}" hx-target="#drawer-root" hx-swap="innerHTML"
+          class="hidden w-fit shrink-0 cursor-pointer items-center justify-center gap-1 whitespace-nowrap rounded-full border border-info/25 bg-info/10 px-2 py-0.5 text-[11px] font-bold text-info sm:inline-flex">{{ d.catalogue_profile.overlap }}</button>
+  {% if d.status == "monitoring" %}
+  <button type="button" disabled
+          class="inline-flex h-7 items-center justify-center gap-2 rounded-lg border border-success/30 bg-success/10 px-2.5 text-[11px] font-bold text-success shadow-xs disabled:pointer-events-none">
+    {% icon "check" class="size-3.5" %} Monitoring
+  </button>
+  {% else %}
+  <button type="button"
+          hx-post="{% url 'discovery:monitor' d.slug %}{{ cluster_qs }}" hx-vals='{"variant": "page"}'
+          hx-target="closest [data-page-discovery-row]" hx-swap="outerHTML" hx-indicator="this"
+          class="relative inline-flex h-7 items-center justify-center gap-2 rounded-lg border bg-background px-2.5 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground [&.htmx-request]:pointer-events-none">
+    <span class="htmx-indicator absolute">{% icon "loader-2" class="size-3.5 animate-spin" %}</span>
+    <span class="[.htmx-request_&]:invisible inline-flex items-center gap-2">{% icon "plus" class="size-3.5" %} Monitor</span>
+  </button>
+  {% endif %}
+  <div class="relative" x-data="menu()" @click.outside="close()">
+    <button type="button" @click.stop="toggle()" aria-label="More actions for {{ d.name }}"
+            class="inline-flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "ellipsis-vertical" class="size-4" %}
+    </button>
+    <div x-show="open" x-cloak x-transition.opacity.duration.100ms
+         class="absolute right-0 top-8 z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+      <button type="button" @click="close()"
+              hx-get="{% url 'discovery:why_match' d.slug %}{{ cluster_qs }}" hx-target="#drawer-root" hx-swap="innerHTML"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "compass" class="size-3.5" %} Why this match?
+      </button>
+      <button type="button" @click="close()"
+              hx-get="{% url 'discovery:compare' d.slug %}" hx-target="#drawer-root" hx-swap="innerHTML"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "git-compare-arrows" class="size-3.5" %} Compare with ToyWorld
+      </button>
+      <a href="{% url 'ai:index' %}?competitor={{ d.name|urlencode }}&candidate=1&prompt={{ "What do we know about "|add:d.name|add:"?"|urlencode }}"
+         class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "sparkles" class="size-3.5" %} Ask AI about this company
+      </a>
+      <div class="-mx-1 my-1 h-px bg-border"></div>
+      <button type="button" @click="close()"
+              hx-post="{% url 'discovery:not_relevant' d.slug %}{{ cluster_qs }}"
+              hx-target="#discovery-results" hx-swap="outerHTML"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "thumbs-down" class="size-3.5" %} Not relevant
+      </button>
+      <button type="button" @click="close()"
+              hx-post="{% url 'discovery:dismiss' d.slug %}{{ cluster_qs }}"
+              hx-target="#discovery-results" hx-swap="outerHTML"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "x" class="size-3.5" %} Dismiss
+      </button>
+    </div>
+  </div>
+</div>

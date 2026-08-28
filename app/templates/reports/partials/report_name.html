@@ -1,0 +1,10 @@
+{% load ui %}{# ReportName — generated-reports-table.tsx. Context: r (report), type (library type or None). #}
+<div class="flex items-center gap-2.5">
+  <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {% if type %}{{ type.tone }}{% else %}bg-muted text-muted-foreground{% endif %}">
+    {% icon type.icon|default:"file-text" class="size-4" %}
+  </span>
+  <span class="min-w-0">
+    <span class="block truncate text-sm font-medium text-foreground">{{ r.name }}</span>
+    <span class="mt-0.5 block text-[11px] text-muted-foreground">Data through: {{ r.data_through }}</span>
+  </span>
+</div>

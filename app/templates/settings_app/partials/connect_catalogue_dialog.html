@@ -1,0 +1,20 @@
+{% extends "components/dialog_shell.html" %}
+{% load ui %}
+{% block dialog_size %}sm:max-w-md{% endblock %}
+{% block dialog_content %}
+<div class="flex flex-col gap-2 text-center sm:text-left">
+  <h2 class="text-base font-bold leading-none">Connect your catalogue</h2>
+  <p class="text-xs text-muted-foreground">Connecting your own catalogue unlocks direct comparison, pricing position and catalogue-gap analysis.</p>
+</div>
+<div class="flex flex-col gap-2.5">
+  {% include "settings_app/partials/connect_row.html" with icon="globe" row_title="Website" description="RivalTracking crawls your own catalogue like a competitor's." %}
+  {% include "settings_app/partials/connect_row.html" with icon="database" row_title="API" description="Push your catalogue directly from your platform." %}
+  {% include "settings_app/partials/connect_row.html" with icon="file-spreadsheet" row_title="CSV" description="Upload a product export from your store." %}
+</div>
+<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+  <button type="button" @click="close()"
+          class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-background px-4 py-2 text-xs font-semibold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+    Close
+  </button>
+</div>
+{% endblock %}

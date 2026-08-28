@@ -1,0 +1,95 @@
+{% extends "components/sheet_shell.html" %}
+{% load ui %}
+{# alert-detail-drawer.tsx. Context: alert, source_url, competitor_slug #}
+
+{% block sheet_content %}
+<div class="flex flex-col gap-1.5 p-4 pb-3">
+  <h2 class="text-base font-bold">{{ alert.rule_name }}</h2>
+  <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+    {% change_badge alert.kind alert.event %}
+    {% impact_badge alert.priority %}
+  </div>
+</div>
+
+<div class="flex flex-col gap-4 px-4 pb-6">
+  <div class="grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs">
+    <div>
+      <span class="block text-[11px] text-muted-foreground">{% if alert.is_pattern %}Pattern{% else %}Product{% endif %}</span>
+      <span class="mt-0.5 block font-medium">{% if alert.is_pattern %}{{ alert.pattern_label }}{% else %}{{ alert.product }}{% endif %}</span>
+    </div>
+    <div>
+      <span class="block text-[11px] text-muted-foreground">Competitor</span>
+      <span class="mt-0.5 block font-medium">{{ alert.competitor }}</span>
+    </div>
+    <div>
+      <span class="block text-[11px] text-muted-foreground">Detected</span>
+      <span class="mt-0.5 block font-medium">{{ alert.detected_at }}</span>
+    </div>
+    <div>
+      <span class="block text-[11px] text-muted-foreground">Triggered rule</span>
+      <span class="mt-0.5 block font-medium">{{ alert.rule.condition }}</span>
+    </div>
+  </div>
+
+  {% if alert.evidence %}
+  <div>
+    <p class="mb-2 text-xs font-bold">Evidence</p>
+    <div class="grid grid-cols-2 gap-2 rounded-xl border p-3 sm:grid-cols-3">
+      <div><span class="block text-[11px] text-muted-foreground">Previous</span><span class="mt-0.5 block text-xs font-medium">{{ alert.evidence.previous }}</span></div>
+      <div><span class="block text-[11px] text-muted-foreground">Current</span><span class="mt-0.5 block text-xs font-medium">{{ alert.evidence.current }}</span></div>
+      <div><span class="block text-[11px] text-muted-foreground">Difference</span><span class="mt-0.5 block text-xs font-medium">{{ alert.evidence.difference }}</span></div>
+      <div><span class="block text-[11px] text-muted-foreground">Change</span><span class="mt-0.5 block text-xs font-medium">{{ alert.evidence.change }}</span></div>
+      <div><span class="block text-[11px] text-muted-foreground">Stock</span><span class="mt-0.5 block text-xs font-medium">{{ alert.evidence.stock }}</span></div>
+      <div><span class="block text-[11px] text-muted-foreground">Category</span><span class="mt-0.5 block text-xs font-medium">{{ alert.evidence.category }}</span></div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="rounded-xl border bg-background p-3.5">
+    <p class="text-xs font-bold">Why you received this alert</p>
+    <div class="mt-2 flex flex-col gap-1.5 text-[11px] text-muted-foreground">
+      <p>Your rule: <span class="font-medium text-foreground">{{ alert.rule.scope }} · {{ alert.rule.condition }}</span></p>
+      <p>Detected change: <span class="font-medium text-foreground">{{ alert.rule.detected }}</span></p>
+      <p class="font-medium text-success">Condition matched.</p>
+    </div>
+  </div>
+
+  <div class="bg-ai-subtle flex items-start gap-2.5 rounded-xl border border-purple/20 p-3.5">
+    <span class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-purple/10 text-purple">{% icon "sparkles" class="size-3.5" %}</span>
+    <div class="min-w-0 flex-1">
+      <p class="text-xs font-bold">Why this may matter</p>
+      <p class="mt-1 text-[11px] leading-relaxed text-foreground/70">{{ alert.ai_note }}</p>
+      <a href="{% url 'ai:index' %}?competitor={{ alert.competitor|urlencode }}{% if alert.product %}&product={{ alert.product|urlencode }}{% endif %}&prompt=Explain this change"
+         class="mt-2.5 inline-flex h-7 items-center justify-center rounded-lg bg-primary px-2.5 text-[11px] font-bold text-primary-foreground transition-colors hover:bg-primary/90">Ask AI about this</a>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-2">
+    {% if not alert.is_pattern and alert.product_slug %}
+    <a href="{% url 'products:detail' alert.product_slug %}"
+       class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "package" class="size-3.5" %} View product
+    </a>
+    {% endif %}
+    <a href="{% url 'changes:index' %}{% if not alert.is_pattern and alert.product_slug %}?product={{ alert.product_slug|urlencode }}{% endif %}"
+       class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "git-compare-arrows" class="size-3.5" %} {% if alert.is_pattern %}View pattern{% else %}View change{% endif %}
+    </a>
+    <a href="{% url 'competitors:detail' competitor_slug %}"
+       class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "boxes" class="size-3.5" %} View competitor
+    </a>
+    {% if source_url %}
+    <a href="{{ source_url }}" target="_blank" rel="noopener noreferrer"
+       class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "external-link" class="size-3.5" %} Open source
+    </a>
+    {% endif %}
+    <button type="button" @click="close()"
+            hx-get="{% url 'alerts:rule_dialog' %}?rule={{ alert.rule_id|urlencode }}" hx-target="#modal-root" hx-swap="innerHTML"
+            class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "pencil" class="size-3.5" %} Edit alert rule
+    </button>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% load ui %}{# Generated Reports card — reports/generated-reports-table.tsx.
+   Fragment refreshed on reports:changed (fired by the staged create dialog).
+   Context: generated ([{r, type}]), toast (optional). #}
+<div id="generated-reports-fragment"
+     hx-get="{% url 'reports:generated_fragment' %}" hx-trigger="reports:changed from:body" hx-target="this" hx-swap="outerHTML">
+  <div class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+    <div class="px-6 pb-4">
+      <h2 class="text-sm font-bold leading-none">Generated Reports</h2>
+    </div>
+
+    {% if generated %}
+    {# Desktop table #}
+    <div class="hidden md:block">
+      <div class="overflow-x-auto">
+        <table class="w-full caption-bottom text-sm" style="min-width: 860px">
+          <thead>
+            <tr class="border-b">
+              <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Report</th>
+              <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Type</th>
+              <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Competitors</th>
+              <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Period</th>
+              <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Created</th>
+              <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Status</th>
+              <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in generated %}
+            <tr class="border-b text-[11px] text-muted-foreground transition-colors hover:bg-muted/50{% if row.r.status == 'ready' %} cursor-pointer{% endif %}"
+                {% if row.r.status == 'ready' %}onclick="window.location.href='{% url 'reports:detail' row.r.id %}'"{% endif %}>
+              <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+                {% include "reports/partials/report_name.html" with r=row.r type=row.type %}
+              </td>
+              <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.r.type }}</td>
+              <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.r.competitors }}</td>
+              <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.r.period }}</td>
+              <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.r.created }}</td>
+              <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+                <span>
+                  {% include "reports/partials/report_status_badge.html" with status=row.r.status %}
+                  {% if row.r.note %}<span class="mt-1 block max-w-52 whitespace-normal text-[11px]">{{ row.r.note }}</span>{% endif %}
+                </span>
+              </td>
+              <td class="whitespace-nowrap px-2 py-2.5 text-right align-middle" onclick="event.stopPropagation()">
+                {% include "reports/partials/report_row_actions.html" with r=row.r %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Mobile card list #}
+    <div class="flex flex-col gap-3 px-4 pb-4 md:hidden">
+      {% for row in generated %}
+      <div class="rounded-xl border p-3.5{% if row.r.status == 'ready' %} cursor-pointer{% endif %}"
+           {% if row.r.status == 'ready' %}onclick="window.location.href='{% url 'reports:detail' row.r.id %}'"{% endif %}>
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            {% include "reports/partials/report_name.html" with r=row.r type=row.type %}
+          </div>
+          <div onclick="event.stopPropagation()">
+            {% include "reports/partials/report_row_actions.html" with r=row.r %}
+          </div>
+        </div>
+        <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+          {% include "reports/partials/report_status_badge.html" with status=row.r.status %}
+          <span class="text-[11px] text-muted-foreground">{{ row.r.type }} · {{ row.r.period }} · {{ row.r.created }}</span>
+        </div>
+        {% if row.r.note %}<p class="mt-2 text-[11px] text-muted-foreground">{{ row.r.note }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="border-t p-0">
+      <button type="button" hx-get="{% url 'reports:create_dialog' %}" hx-target="#modal-root" hx-swap="innerHTML"
+              class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-none text-[11px] font-bold text-primary transition-colors hover:bg-accent">
+        {% icon "plus" class="size-3.5" %} Create report
+      </button>
+    </div>
+    {% else %}
+    {% empty_state icon="file-text" heading="No reports yet" text="Create your first intelligence report from the competitor data RivalTracking has collected." action_label="Create report" action_href="?create=1" %}
+    {% endif %}
+  </div>
+</div>
+{% if toast %}{% include "partials/toast.html" with variant=toast.variant title=toast.title description=toast.description %}{% endif %}

@@ -1,6 +1,6 @@
 {# Unread-alerts badge on the sidebar Alerts item. Swapped out-of-band by
    mark-read responses; keep the id stable. #}
-<span id="{{ badge_id|default:"sidebar-alerts-badge" }}">
+<span id="{{ badge_id|default:"sidebar-alerts-badge" }}"{% if oob %} hx-swap-oob="true"{% endif %}>
   {% if unread_count %}
   <span class="pointer-events-none absolute right-1.5 top-1/2 flex h-[18px] min-w-[18px] -translate-y-1/2 select-none items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold tabular-nums text-destructive-foreground">{{ unread_count }}</span>
   {% endif %}

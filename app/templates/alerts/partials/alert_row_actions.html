@@ -1,0 +1,35 @@
+{% load ui %}{# recent-alerts-table.tsx AlertRowActions. Context: a, rule_filter #}
+<div class="relative" x-data="menu()" @click.outside="close()">
+  <button type="button" @click.stop="toggle()" aria-label="Actions for alert"
+          class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+    {% icon "more-horizontal" class="size-4" %}
+  </button>
+  <div x-show="open" x-cloak x-transition.opacity.duration.100ms @click.stop
+       class="absolute right-0 top-8 z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+    <button type="button"
+            hx-post="{% url 'alerts:open_alert' a.id %}{% if rule_filter %}?rule={{ rule_filter.id|urlencode }}{% endif %}"
+            hx-target="#drawer-root" hx-swap="innerHTML"
+            class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+      {% icon "eye" class="size-3.5" %} View details
+    </button>
+    {% if a.is_pattern %}
+    <a href="{% url 'changes:index' %}"
+       class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+      {% icon "git-compare-arrows" class="size-3.5" %} View pattern
+    </a>
+    {% else %}
+    <a href="{% url 'products:detail' a.product_slug %}"
+       class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+      {% icon "package" class="size-3.5" %} View product
+    </a>
+    {% endif %}
+    {% if a.status == "new" %}
+    <button type="button"
+            hx-post="{% url 'alerts:mark_read' a.id %}{% if rule_filter %}?rule={{ rule_filter.id|urlencode }}{% endif %}"
+            hx-target="#recent-alerts-fragment" hx-swap="outerHTML"
+            class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+      {% icon "check" class="size-3.5" %} Mark as read
+    </button>
+    {% endif %}
+  </div>
+</div>

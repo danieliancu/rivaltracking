@@ -1,0 +1,49 @@
+{% extends "components/sheet_shell.html" %}
+{% load ui %}
+{# Compare-catalogue drawer — compare-catalogue-drawer.tsx.
+   Context: d, products_display, toyworld (hard-coded reference profile). #}
+
+{% block sheet_size %}sm:max-w-xl{% endblock %}
+
+{% block sheet_content %}
+<div class="flex flex-col gap-1.5 p-4 pb-2">
+  <h2 class="text-base font-bold">{{ d.name }} vs {{ toyworld.name }}</h2>
+  <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+    Catalogue profile comparison
+    <span class="inline-flex w-fit shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-info/25 bg-info/10 px-2 py-0.5 text-[11px] font-bold text-info">{% icon "git-compare-arrows" class="size-3" %} {{ d.catalogue_profile.overlap }}</span>
+  </div>
+</div>
+
+<div class="px-4 pb-6">
+  <div class="overflow-x-auto rounded-xl border">
+    <table class="w-full caption-bottom text-sm" style="min-width: 440px">
+      <thead>
+        <tr class="border-b transition-colors hover:bg-muted/50">
+          <th class="h-10 whitespace-nowrap px-3.5 text-left align-middle text-[10px] font-bold"></th>
+          <th class="h-10 whitespace-nowrap px-3.5 text-left align-middle text-[10px] font-bold">{{ d.name }}</th>
+          <th class="h-10 whitespace-nowrap px-3.5 text-left align-middle text-[10px] font-bold">{{ toyworld.name }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="border-b text-[11px] text-muted-foreground transition-colors hover:bg-muted/50">
+          <td class="whitespace-nowrap px-3.5 py-2.5 align-middle font-bold text-foreground">Products</td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">{{ products_display }}</td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">{{ toyworld.products }}</td>
+        </tr>
+        <tr class="border-b text-[11px] text-muted-foreground transition-colors hover:bg-muted/50">
+          <td class="whitespace-nowrap px-3.5 py-2.5 align-middle font-bold text-foreground">Price band</td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">{{ d.catalogue_profile.price_band }}</td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">{{ toyworld.price_band }}</td>
+        </tr>
+        <tr class="text-[11px] text-muted-foreground transition-colors hover:bg-muted/50">
+          <td class="whitespace-nowrap px-3.5 py-2.5 align-middle font-bold text-foreground">Top categories</td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">{% for c in d.catalogue_profile.categories %}{{ c.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">{{ toyworld.categories }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="mt-3 text-[11px] leading-relaxed text-muted-foreground">This comparison uses current catalogue profiles only. Price history and change tracking for {{ d.name }} begin after monitoring starts.</p>
+</div>
+{% endblock %}

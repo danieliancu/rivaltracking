@@ -1,0 +1,86 @@
+{% load ui %}{# team-section.tsx Team card. Context: members, assignable_roles, oob (optional). #}
+<div id="team-card" {% if oob %}hx-swap-oob="outerHTML"{% endif %}
+     class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+  <div class="grid auto-rows-min grid-cols-[1fr_auto] grid-rows-[auto_auto] items-start gap-2 px-6 pb-4">
+    <div class="text-sm font-bold leading-none">Team</div>
+    <div class="col-start-2 row-span-2 row-start-1 self-start justify-self-end">
+      <button type="button"
+              hx-get="{% url 'settings_app:team_invite' %}" hx-target="#modal-root" hx-swap="innerHTML"
+              class="inline-flex h-8 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-[11px] font-bold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90">
+        {% icon "user-plus" class="size-3.5" %} Invite member
+      </button>
+    </div>
+    <div class="text-xs text-muted-foreground">Manage who can access this RivalTracking workspace.</div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full caption-bottom text-sm" style="min-width: 640px">
+      <thead>
+        <tr class="border-b transition-colors hover:bg-muted/50">
+          <th class="h-10 whitespace-nowrap px-3.5 text-left align-middle text-[10px] font-bold">Name</th>
+          <th class="h-10 whitespace-nowrap px-3.5 text-left align-middle text-[10px] font-bold">Email</th>
+          <th class="h-10 whitespace-nowrap px-3.5 text-left align-middle text-[10px] font-bold">Role</th>
+          <th class="h-10 whitespace-nowrap px-3.5 text-left align-middle text-[10px] font-bold">Status</th>
+          <th class="h-10 whitespace-nowrap px-3.5 text-left align-middle text-[10px] font-bold">Last Active</th>
+          <th class="h-10 whitespace-nowrap px-3.5 text-left align-middle text-[10px] font-bold"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        <tr class="border-b text-[11px] text-muted-foreground transition-colors hover:bg-muted/50">
+          <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+            <span class="flex items-center gap-2.5">
+              <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-bold text-accent-foreground">{{ m.initials }}</span>
+              <span class="text-sm font-medium text-foreground">{{ m.name }}</span>
+            </span>
+          </td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">{{ m.email }}</td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">
+            <span class="inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full border border-transparent bg-secondary px-2 py-0.5 text-[11px] font-bold text-muted-foreground">{{ m.role }}</span>
+          </td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">
+            <span class="inline-flex w-fit shrink-0 items-center justify-center gap-1.5 overflow-hidden whitespace-nowrap rounded-full border px-2 py-1 text-[11px] font-bold {% if m.status == 'Active' %}border-success/25 bg-success/10 text-success{% else %}border-info/25 bg-info/10 text-info{% endif %}">
+              <i class="size-1.5 rounded-full {% if m.status == 'Active' %}bg-success{% else %}bg-info{% endif %}"></i>
+              {{ m.status }}
+            </span>
+          </td>
+          <td class="whitespace-nowrap px-3.5 py-2 align-middle">{{ m.last_active }}</td>
+          <td class="whitespace-nowrap px-2 py-2 text-right align-middle">
+            {% if m.role != "Owner" %}
+            <span class="relative inline-flex" x-data="menu()" @click.outside="close()">
+              <button type="button" @click.stop="toggle()" aria-label="Actions for {{ m.name }}"
+                      class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+                {% icon "more-horizontal" class="size-4" %}
+              </button>
+              <div x-show="open" x-cloak x-transition.opacity.duration.100ms
+                   class="absolute right-0 top-8 z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-left text-popover-foreground shadow-md">
+                {% for role in assignable_roles %}
+                <button type="button" @click="close()"
+                        hx-post="{% url 'settings_app:team_role' m.id %}" hx-vals='{"role": "{{ role }}"}' hx-swap="none"
+                        class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground {% if role == m.role %}pointer-events-none opacity-50{% endif %}"
+                        {% if role == m.role %}disabled{% endif %}>
+                  Make {{ role }}
+                </button>
+                {% endfor %}
+                {% if m.status == "Invited" %}
+                <button type="button" @click="close()"
+                        hx-post="{% url 'settings_app:team_resend' m.id %}" hx-swap="none"
+                        class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+                  {% icon "mail" class="size-3.5" %} Resend invitation
+                </button>
+                {% endif %}
+                <div class="-mx-1 my-1 h-px bg-border"></div>
+                <button type="button" @click="close()"
+                        hx-get="{% url 'settings_app:team_remove' m.id %}" hx-target="#modal-root" hx-swap="innerHTML"
+                        class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive outline-hidden hover:bg-accent hover:text-accent-foreground">
+                  {% icon "trash-2" class="size-3.5" %} Remove
+                </button>
+              </div>
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>

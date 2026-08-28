@@ -1,0 +1,148 @@
+{% load ui %}{# Products table fragment — products/products-table.tsx.
+   Root carries the Alpine selection state used by the bulk bar. #}
+<div id="products-table" data-table-fragment
+     x-data='{ selected: {{ preselected_json }}, pageSlugs: {{ page_slugs_json }},
+               get allSelected() { return this.pageSlugs.length > 0 && this.pageSlugs.every(s => this.selected.includes(s)) },
+               toggleAll(on) { this.selected = on ? Array.from(new Set(this.selected.concat(this.pageSlugs))) : this.selected.filter(s => !this.pageSlugs.includes(s)) } }'>
+  {% if locked_slug %}<input type="hidden" name="locked" value="{{ locked_slug }}">{% endif %}
+
+  <div x-show="selected.length" x-cloak
+       class="mx-4 mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-accent px-3.5 py-2">
+    <span class="text-[11px] font-bold text-accent-foreground"
+          x-text="selected.length + ' product' + (selected.length > 1 ? 's' : '') + ' selected'"></span>
+    <span class="ml-auto flex items-center gap-1.5">
+      <button type="button"
+              hx-get="{% url 'products:compare_selected' %}" hx-include="#products-table"
+              hx-target="#drawer-root" hx-swap="innerHTML"
+              class="inline-flex h-7 items-center justify-center gap-2 rounded-lg bg-primary px-2.5 text-[10px] font-bold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90">
+        {% icon "git-compare-arrows" class="size-3" %} Compare
+      </button>
+      <a href="{% url 'products:export' %}"
+         @click="let p = new URLSearchParams(window.location.search); selected.forEach(s => p.append('selected', s)); $el.href = '{% url 'products:export' %}?' + p.toString()"
+         class="inline-flex h-7 items-center justify-center gap-2 rounded-lg border bg-card px-2.5 text-[10px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+        {% icon "download" class="size-3" %} Export
+      </a>
+      <button type="button"
+              hx-post="{% url 'products:watchlist_add' %}" hx-include="#products-table, #products-filter-form"
+              hx-target="closest [data-table-fragment]" hx-swap="outerHTML"
+              class="inline-flex h-7 items-center justify-center gap-2 rounded-lg border bg-card px-2.5 text-[10px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+        {% icon "star" class="size-3" %} Add to watchlist
+      </button>
+      <button type="button" aria-label="Clear selection" @click="selected = []"
+              class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+        {% icon "x" class="size-3.5" %}
+      </button>
+    </span>
+  </div>
+
+  {% if not has_rows %}
+    {% url 'competitors:index' as competitors_url %}
+    {% empty_state icon="package" heading="No products available yet" text="Products will appear after the initial competitor scan." action_label="Add competitor" action_href=competitors_url %}
+  {% elif not has_visible %}
+    {% empty_state heading="No products found" text="Try changing your filters or search query." %}
+  {% else %}
+
+  <div class="hidden px-0 pb-0 md:block">
+    <div class="overflow-x-auto">
+      <table class="w-full caption-bottom text-sm" style="min-width: 960px">
+        <thead>
+          <tr class="border-b">
+            <th class="h-10 w-10 px-3.5 text-left align-middle">
+              <input type="checkbox" aria-label="Select all visible products"
+                     :checked="allSelected" @change="toggleAll($event.target.checked)"
+                     class="size-4 shrink-0 cursor-pointer rounded-[4px] border-input accent-primary">
+            </th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Product</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Competitor</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Category</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Current Price</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Previous Price</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Change</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Stock</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Last Change</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in page.rows %}
+          <tr class="border-b text-[11px] text-muted-foreground transition-colors hover:bg-muted/50">
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+              <input type="checkbox" name="selected" value="{{ row.slug }}" x-model="selected"
+                     aria-label="Select {{ row.name }}"
+                     class="size-4 shrink-0 cursor-pointer rounded-[4px] border-input accent-primary">
+            </td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+              <div class="flex items-center gap-2">
+                <span class="flex items-center gap-2.5">
+                  {% product_thumbnail row size="sm" %}
+                  <span class="min-w-0">
+                    <a href="{% url 'products:detail' row.slug %}" class="block truncate text-sm font-medium text-foreground hover:text-primary hover:underline">{{ row.name }}</a>
+                    <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ row.sku }}</span>
+                  </span>
+                </span>
+                {% include "products/partials/matched_badge.html" %}
+              </div>
+            </td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.competitor }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.category }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle font-medium text-foreground">{{ row.current_price|gbp }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.previous_price|gbp }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% change_badge row.change.kind row.change.label %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% stock_badge row.in_stock %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.last_change }}</td>
+            <td class="whitespace-nowrap px-2 py-2.5 text-right align-middle">
+              {% include "products/partials/row_actions.html" %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-3 px-4 pb-4 md:hidden">
+    {% for row in page.rows %}
+    <div class="rounded-xl border p-3.5">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0 flex-1">
+          <span class="flex items-center gap-2.5">
+            {% product_thumbnail row size="sm" %}
+            <span class="min-w-0">
+              <a href="{% url 'products:detail' row.slug %}" class="block truncate text-sm font-medium text-foreground hover:text-primary hover:underline">{{ row.name }}</a>
+              <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ row.sku }}</span>
+            </span>
+          </span>
+        </div>
+        {% include "products/partials/row_actions.html" %}
+      </div>
+      <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+        {% change_badge row.change.kind row.change.label %}
+        {% stock_badge row.in_stock %}
+        {% include "products/partials/matched_badge.html" %}
+      </div>
+      <div class="mt-3 grid grid-cols-3 gap-2 text-[10px] text-muted-foreground">
+        <div>
+          <span class="block font-medium text-foreground">{{ row.current_price|gbp }}</span>
+          Current price
+        </div>
+        <div>
+          <span class="block truncate font-medium text-foreground">{{ row.competitor }}</span>
+          Competitor
+        </div>
+        <div>
+          <span class="block font-medium text-foreground">{{ row.last_change }}</span>
+          Last change
+        </div>
+      </div>
+      <a href="{% url 'products:detail' row.slug %}"
+         class="mt-3 inline-flex h-8 w-full items-center justify-center rounded-lg border bg-background text-[10px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">View product</a>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% pagination page "products" %}
+  {% endif %}
+
+  {% if is_fragment %}{% include "products/partials/clear_button.html" with oob=True %}{% endif %}
+  {% if toast_title %}{% include "partials/toast.html" with variant="success" title=toast_title %}{% endif %}
+</div>

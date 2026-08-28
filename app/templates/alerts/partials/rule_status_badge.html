@@ -1,0 +1,6 @@
+{# alert-status-badge.tsx AlertRuleStatusBadge. Context: active #}
+{% if active %}
+<span class="inline-flex w-fit items-center gap-1.5 rounded-full border border-success/25 bg-success/10 px-2 py-1 text-[11px] font-bold text-success"><i class="size-1.5 rounded-full bg-success"></i>Active</span>
+{% else %}
+<span class="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-muted px-2 py-1 text-[11px] font-bold text-muted-foreground"><i class="size-1.5 rounded-full bg-muted-foreground"></i>Paused</span>
+{% endif %}

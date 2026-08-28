@@ -1,0 +1,13 @@
+{# primitives.tsx RadioCards — bordered radio cards, auto-saving on change.
+   Context: options = [{value,label,hint}], name, value, post_url. #}
+<div class="grid gap-2 sm:grid-cols-3" x-data="{ v: '{{ value|escapejs }}' }">
+  {% for o in options %}
+  <label class="cursor-pointer rounded-xl border p-2.5 text-left transition-colors"
+         :class="v === '{{ o.value|escapejs }}' ? 'border-primary bg-accent' : 'bg-card hover:border-primary/40'">
+    <input type="radio" name="{{ name }}" value="{{ o.value }}" class="sr-only" x-model="v"
+           hx-post="{{ post_url }}" hx-trigger="change" hx-swap="none">
+    <span class="block text-xs font-bold">{{ o.label }}</span>
+    <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ o.hint }}</span>
+  </label>
+  {% endfor %}
+</div>

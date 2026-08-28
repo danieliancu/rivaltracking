@@ -1,0 +1,45 @@
+{% load ui %}{# Star toggle + row dropdown — products-table.tsx RowActions. #}
+<span class="flex items-center justify-end gap-0.5">
+  {% if row.slug in watchlist %}
+    {% include "products/partials/star_button.html" with starred=True %}
+  {% else %}
+    {% include "products/partials/star_button.html" with starred=False %}
+  {% endif %}
+  <span class="relative" x-data="menu()" @click.outside="close()">
+    <button type="button" @click.stop="toggle()" aria-label="Actions for {{ row.name }}"
+            class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "more-horizontal" class="size-4" %}
+    </button>
+    <div x-show="open" x-cloak x-transition.opacity.duration.100ms
+         class="absolute right-0 top-8 z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-left text-popover-foreground shadow-md">
+      <a href="{% url 'products:detail' row.slug %}"
+         class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "eye" class="size-3.5" %} View product intelligence
+      </a>
+      <a href="{% url 'products:detail' row.slug %}?tab=price-history"
+         class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "line-chart" class="size-3.5" %} View price history
+      </a>
+      <a href="{% url 'products:detail' row.slug %}?tab=stock-history"
+         class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "history" class="size-3.5" %} View stock history
+      </a>
+      {% if row.matched %}
+      <button type="button" @click="close()"
+              hx-get="{% url 'products:compare_drawer' row.slug %}" hx-target="#drawer-root" hx-swap="innerHTML"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "git-compare-arrows" class="size-3.5" %} Compare competitors
+      </button>
+      {% else %}
+      <span class="pointer-events-none flex w-full select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm opacity-50">
+        {% icon "git-compare-arrows" class="size-3.5" %} Compare competitors
+      </span>
+      {% endif %}
+      <div class="-mx-1 my-1 h-px bg-border"></div>
+      <a href="{{ row.source_url }}" target="_blank" rel="noopener noreferrer"
+         class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "external-link" class="size-3.5" %} Open source page
+      </a>
+    </div>
+  </span>
+</span>

@@ -1,0 +1,22 @@
+{% load ui %}{# alert-activity.tsx — line chart with local Today|7D|30D tabs. #}
+<section id="alert-activity-fragment" class="flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm">
+  <div class="grid grid-cols-[1fr_auto] items-start gap-1.5 px-6">
+    <div class="flex flex-col gap-1.5">
+      <h2 class="text-sm font-bold leading-none">Alert Activity</h2>
+      <p class="text-xs text-muted-foreground">Triggered alerts over time</p>
+    </div>
+    <div class="max-md:col-span-2 max-md:col-start-1 max-md:row-start-2 max-md:mt-1 max-md:justify-self-start">
+      <div class="inline-flex h-8 w-fit items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground">
+        {% for r in activity_ranges %}
+        <button type="button"
+                hx-get="{% url 'alerts:index' %}?activity_range={{ r.key }}"
+                hx-target="#alert-activity-fragment" hx-swap="outerHTML"
+                class="inline-flex h-full items-center justify-center rounded-md px-2.5 text-[10px] font-semibold transition-colors {% if r.key == activity_range %}bg-primary text-primary-foreground{% else %}text-muted-foreground hover:text-foreground{% endif %}">{{ r.label }}</button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="px-6">
+    {% chart "alert-activity" activity_chart 200 %}
+  </div>
+</section>

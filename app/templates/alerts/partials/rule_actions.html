@@ -1,0 +1,61 @@
+{% load ui %}{# alert-rules-table.tsx RuleActions dropdown + delete AlertDialog.
+   Context: rule. Mutations post the filter form along so the refreshed
+   fragment keeps the active filters. #}
+<div x-data="{ confirm: false }">
+  <div class="relative" x-data="menu()" @click.outside="close()">
+    <button type="button" @click.stop="toggle()" aria-label="Actions for {{ rule.name }}"
+            class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "more-horizontal" class="size-4" %}
+    </button>
+    <div x-show="open" x-cloak x-transition.opacity.duration.100ms
+         class="absolute right-0 top-8 z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+      <button type="button" @click="close()"
+              hx-get="{% url 'alerts:rule_dialog' %}?rule={{ rule.id|urlencode }}" hx-target="#modal-root" hx-swap="innerHTML"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "pencil" class="size-3.5" %} Edit
+      </button>
+      <button type="button"
+              hx-post="{% url 'alerts:toggle_rule' rule.id %}" hx-include="#alert-rules-filter-form"
+              hx-target="#alert-rules-fragment" hx-swap="outerHTML"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% if rule.active %}{% icon "pause" class="size-3.5" %} Pause{% else %}{% icon "play" class="size-3.5" %} Resume{% endif %}
+      </button>
+      <button type="button"
+              hx-post="{% url 'alerts:duplicate_rule' rule.id %}" hx-include="#alert-rules-filter-form"
+              hx-target="#alert-rules-fragment" hx-swap="outerHTML"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "copy" class="size-3.5" %} Duplicate
+      </button>
+      <button type="button" @click="close()"
+              hx-get="{% url 'alerts:index' %}?rule={{ rule.id|urlencode }}" hx-target="#recent-alerts-fragment"
+              hx-swap="outerHTML" hx-push-url="true"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "history" class="size-3.5" %} View history
+      </button>
+      <div class="-mx-1 my-1 h-px bg-border"></div>
+      <button type="button" @click="close(); confirm = true"
+              class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive outline-hidden hover:bg-accent hover:text-accent-foreground">
+        {% icon "trash-2" class="size-3.5" %} Delete
+      </button>
+    </div>
+  </div>
+
+  {# Destructive confirm (AlertDialog) #}
+  <div x-show="confirm" x-cloak @keydown.escape.window="confirm = false" class="text-left font-normal">
+    <div class="fixed inset-0 z-50 bg-black/50" @click="confirm = false"></div>
+    <div class="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg sm:max-w-lg">
+      <div class="flex flex-col gap-2">
+        <h2 class="text-base font-semibold text-foreground">Delete "{{ rule.name }}"?</h2>
+        <p class="text-xs text-muted-foreground">RivalTracking will stop watching for this activity. Alerts already triggered by this rule are kept.</p>
+      </div>
+      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button type="button" @click="confirm = false"
+                class="inline-flex h-9 items-center justify-center rounded-md border bg-background px-4 text-xs font-semibold text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">Cancel</button>
+        <button type="button"
+                hx-post="{% url 'alerts:delete_rule' rule.id %}" hx-include="#alert-rules-filter-form"
+                hx-target="#alert-rules-fragment" hx-swap="outerHTML"
+                class="inline-flex h-9 items-center justify-center rounded-md bg-destructive px-4 text-xs font-bold text-destructive-foreground hover:bg-destructive/90">Delete alert</button>
+      </div>
+    </div>
+  </div>
+</div>

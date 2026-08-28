@@ -1,0 +1,49 @@
+{% load ui %}{# monitoring-section.tsx #}
+{% url 'settings_app:save' 'monitoring' as save_url %}
+<div class="flex flex-col gap-4">
+  {% include "settings_app/partials/section_card_start.html" with title="Monitoring" subtitle="Control how often RivalTracking checks monitored competitors." %}
+    <div class="max-w-xs">
+      {% include "settings_app/partials/form_field.html" with label="Default scan frequency" name="frequency" value=m.frequency options=frequency_options post_url=save_url %}
+    </div>
+    {% include "settings_app/partials/toggle_row.html" with label="Allow individual competitor schedules" description="You can override the default frequency from a competitor's monitoring settings." name="allow_overrides" checked=m.allow_overrides post_url=save_url %}
+    {% include "settings_app/partials/toggle_row.html" with label="Spread scans automatically" description="RivalTracking can distribute scans throughout the day to improve reliability and reduce unnecessary load. Recommended." name="spread_scans" checked=m.spread_scans post_url=save_url %}
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Monitoring scope" subtitle="Choose what RivalTracking tracks on competitor product pages." %}
+    {% for item in scope_items %}
+      {% include "settings_app/partials/toggle_row.html" with label=item.label description=None name="scope."|add:item.key checked=item.checked post_url=save_url %}
+    {% endfor %}
+    <p class="border-t pt-3 text-[11px] font-bold text-muted-foreground">Advanced tracking</p>
+    {% for item in advanced_items %}
+      {% include "settings_app/partials/toggle_row.html" with label=item.label description=None name="advanced_scope."|add:item.key checked=item.checked post_url=save_url %}
+    {% endfor %}
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Change detection" subtitle="Fine-tune which detected changes are reported." %}
+    <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      Ignore price changes smaller than
+      <input type="text" name="ignore_threshold" value="{{ m.ignore_threshold }}" aria-label="Ignore price changes smaller than"
+             hx-post="{{ save_url }}" hx-trigger="change" hx-swap="none"
+             class="h-8 w-16 min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-center text-xs shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+      %
+    </div>
+    {% include "settings_app/partials/toggle_row.html" with label="Confirm removed products before reporting them" description="RivalTracking verifies that temporarily unavailable pages are not incorrectly reported as removed products." name="confirm_removed" checked=m.confirm_removed post_url=save_url %}
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Monitoring status" subtitle=None %}
+    <div class="grid grid-cols-3 gap-3">
+      <div>
+        <span class="block text-sm font-medium">{{ m.status.competitors }}</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">Competitors monitored</span>
+      </div>
+      <div>
+        <span class="block text-sm font-medium">{{ m.status.interval }}</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">Default interval</span>
+      </div>
+      <div>
+        <span class="block text-sm font-medium">{{ m.status.last_activity }}</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">Last monitoring activity</span>
+      </div>
+    </div>
+  {% include "settings_app/partials/section_card_end.html" %}
+</div>

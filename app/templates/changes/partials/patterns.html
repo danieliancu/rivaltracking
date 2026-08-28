@@ -1,0 +1,26 @@
+{% load ui %}{# Major Change Patterns — changes/change-patterns.tsx. The CTA is a
+   deep link that applies the pattern's stored filters (?pattern=… + params). #}
+<section class="flex flex-col gap-3">
+  <h2 class="text-sm font-bold">Major Change Patterns</h2>
+  <div class="grid gap-3.5 md:grid-cols-3">
+    {% for p in patterns %}
+    <div class="flex flex-col gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
+      <div class="flex items-center gap-2.5">
+        <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {{ p.tone }}">{% icon p.icon class="size-4" %}</span>
+        <span class="min-w-0">
+          <span class="block truncate text-sm font-medium">{{ p.title }}</span>
+          <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ p.competitor }}</span>
+        </span>
+      </div>
+      <div>
+        <span class="block text-lg font-bold tracking-tight">{{ p.stat }}</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ p.stat_detail }} · {{ p.meta }}</span>
+      </div>
+      <a href="{{ p.href }}"
+         class="inline-flex h-8 w-fit items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+        {{ p.cta }} {% icon "arrow-right" class="size-3.5" %}
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</section>

@@ -1,0 +1,58 @@
+{% extends "components/sheet_shell.html" %}
+{% load ui %}
+
+{% block sheet_size %}sm:max-w-xl{% endblock %}
+
+{% block sheet_content %}
+<div class="flex flex-col gap-1.5 p-4 pb-2">
+  <h2 class="text-base font-bold">{{ row.name }}</h2>
+  <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+    Matched across {{ compare.matched.count }} competitors
+    <span class="inline-flex w-fit shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-info/25 bg-info/10 px-2 py-0.5 text-[11px] font-bold text-info">
+      {% icon "git-compare-arrows" class="size-3" %}
+      Matched · {{ compare.matched.confidence }}% confidence
+    </span>
+  </div>
+</div>
+
+<div class="px-4 pb-6">
+  <div class="overflow-x-auto rounded-xl border">
+    <table class="w-full caption-bottom text-sm" style="min-width: 480px">
+      <thead>
+        <tr class="border-b">
+          <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Competitor</th>
+          <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Price</th>
+          <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Stock</th>
+          <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Promotion</th>
+          <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Last Scan</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in compare.listings %}
+        <tr class="border-b text-[11px] text-muted-foreground{% if l.is_lowest %} bg-success/5{% endif %}">
+          <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+            <span class="block text-sm font-medium text-foreground">{{ l.competitor }}</span>
+            {% if l.is_lowest %}
+            <span class="mt-1 inline-flex w-fit shrink-0 items-center justify-center whitespace-nowrap rounded-full border border-success/25 bg-success/10 px-2 py-0.5 text-[11px] font-bold text-success">Lowest price</span>
+            {% endif %}
+          </td>
+          <td class="whitespace-nowrap px-3.5 py-2.5 align-middle font-medium text-foreground">{{ l.price|gbp }}</td>
+          <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% stock_badge l.in_stock %}</td>
+          <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ l.promotion|default:"—" }}</td>
+          <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ l.last_scan }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if compare.lowest_out_of_stock %}
+  <p class="mt-2 text-[10px] text-muted-foreground">The lowest detected price is currently out of stock.</p>
+  {% endif %}
+
+  <div class="bg-ai-subtle mt-4 flex items-start gap-2.5 rounded-xl border border-purple/20 p-3.5">
+    <span class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-purple/10 text-purple">{% icon "sparkles" class="size-3.5" %}</span>
+    <p class="text-[11px] leading-relaxed text-foreground/70">{{ compare.matched.insight }}</p>
+  </div>
+</div>
+{% endblock %}

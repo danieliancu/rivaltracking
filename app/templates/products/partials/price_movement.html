@@ -1,0 +1,22 @@
+{% load ui %}{# Price Movement line chart — products/price-movement.tsx. #}
+<div class="flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm">
+  <div class="grid grid-cols-[1fr_auto] items-start gap-1.5 px-6">
+    <div class="flex flex-col gap-1.5">
+      <h2 class="text-sm font-bold leading-none">Price Movement</h2>
+      <div class="flex gap-3.5 text-[10px] text-muted-foreground">
+        <span class="flex items-center gap-1.5">
+          <i class="size-1.5 rounded-full bg-success"></i>
+          Price decreases: <strong class="text-success">{{ price_movement.decreases }}</strong>
+        </span>
+        <span class="flex items-center gap-1.5">
+          <i class="size-1.5 rounded-full bg-destructive"></i>
+          Price increases: <strong class="text-destructive">{{ price_movement.increases }}</strong>
+        </span>
+      </div>
+    </div>
+    <span class="text-[10px] font-semibold text-muted-foreground">Last 30 days</span>
+  </div>
+  <div class="px-6">
+    {% chart "products-price-movement" price_movement.chart 180 %}
+  </div>
+</div>

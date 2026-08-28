@@ -1,0 +1,21 @@
+{% load ui %}{# Running phase of the discovery dialog — discovery-dialog.tsx.
+   run_discovery already ran server-side; stagedProgress animates the
+   checklist, fires discovery:changed when done, then reveals View results. #}
+<div class="contents" x-data="stagedProgress(4, 700, 'discovery:changed')">
+  <div class="flex flex-col gap-2.5 py-1">
+    {% for label in stages %}
+    <div class="flex items-center gap-2.5 text-xs font-semibold"
+         :class="stage > {{ forloop.counter0 }} ? 'text-success' : stage === {{ forloop.counter0 }} ? 'text-foreground' : 'text-muted-foreground/50'">
+      <span x-show="stage > {{ forloop.counter0 }}" x-cloak>{% icon "check" class="size-4 text-success" %}</span>
+      <span x-show="stage === {{ forloop.counter0 }}" x-cloak>{% icon "loader-2" class="size-4 animate-spin text-primary" %}</span>
+      <span x-show="stage < {{ forloop.counter0 }}" x-cloak><i class="block size-4 rounded-full border border-border"></i></span>
+      {{ label }}
+    </div>
+    {% endfor %}
+  </div>
+  <div x-show="done" x-cloak class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+    <button type="button" @click="close()"
+            class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90">View results</button>
+  </div>
+</div>
+{% include "partials/toast.html" with variant=toast.variant title=toast.title description=toast.description %}

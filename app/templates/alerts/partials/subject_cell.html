@@ -1,0 +1,22 @@
+{% load ui %}{# recent-alerts-table.tsx SubjectCell. Context: a (annotated alert) #}
+{% if a.is_pattern %}
+<span class="flex items-center gap-2.5">
+  <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg bg-teal/10 text-teal">
+    {% icon "git-compare-arrows" class="size-4" %}
+  </span>
+  <span class="min-w-0">
+    <span class="block truncate text-sm font-medium text-foreground">{{ a.pattern_label }}</span>
+    <span class="mt-0.5 block text-[11px] text-muted-foreground">Change pattern{% if a.category %} · {{ a.category }}{% endif %}</span>
+  </span>
+</span>
+{% else %}
+<span class="flex items-center gap-2.5">
+  <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+    {% icon a.product_icon class="size-4" %}
+  </span>
+  <span class="min-w-0">
+    <span class="block truncate text-sm font-medium text-foreground">{{ a.product }}</span>
+    <span class="mt-0.5 block text-[11px] text-muted-foreground">Product</span>
+  </span>
+</span>
+{% endif %}

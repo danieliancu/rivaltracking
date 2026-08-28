@@ -1,0 +1,7 @@
+{% load ui %}<button type="button" @click.stop
+        hx-post="{% url 'products:watchlist_toggle' row.slug %}" hx-target="this" hx-swap="outerHTML"
+        aria-label="{% if starred %}Remove {{ row.name }} from watchlist{% else %}Add {{ row.name }} to watchlist{% endif %}"
+        class="inline-flex size-7 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground {% if starred %}text-warning{% else %}text-muted-foreground/50{% endif %}">
+  {% if starred %}{% icon "star" class="size-4 fill-current" %}{% else %}{% icon "star" class="size-4" %}{% endif %}
+</button>
+{% if toast_title %}{% include "partials/toast.html" with variant="success" title=toast_title %}{% endif %}

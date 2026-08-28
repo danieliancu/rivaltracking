@@ -1,0 +1,40 @@
+{% load ui %}{# Detected Events table — product-details.tsx ProductEvents.
+   Context: shown_events, events_empty_text. Rows open the changes drawer. #}
+{% if not shown_events %}
+<div class="flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm">
+  {% empty_state heading="No events recorded" text=events_empty_text %}
+</div>
+{% else %}
+<div class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+  <div class="px-6 pb-4">
+    <h2 class="text-sm font-bold leading-none">Detected Events</h2>
+  </div>
+  <div class="px-0 pb-0">
+    <div class="overflow-x-auto">
+      <table class="w-full caption-bottom text-sm" style="min-width: 560px">
+        <thead>
+          <tr class="border-b">
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Change</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Old Value</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">New Value</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Impact</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Detected</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in shown_events %}
+          <tr class="cursor-pointer border-b text-[11px] text-muted-foreground transition-colors hover:bg-muted/50"
+              hx-get="{% url 'changes:drawer' e.id %}" hx-target="#drawer-root" hx-swap="innerHTML">
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% change_badge e.kind e.label %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ e.previous }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle font-medium text-foreground">{{ e.current }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle capitalize">{{ e.impact }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ e.detected_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
