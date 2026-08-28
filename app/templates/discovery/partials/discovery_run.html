@@ -1,6 +1,6 @@
-{% load ui %}{# Running phase of the discovery dialog — discovery-dialog.tsx.
+{% load ui %}{% comment %} Running phase of the discovery dialog — discovery-dialog.tsx.
    run_discovery already ran server-side; stagedProgress animates the
-   checklist, fires discovery:changed when done, then reveals View results. #}
+   checklist, fires discovery:changed when done, then reveals View results. {% endcomment %}
 <div class="contents" x-data="stagedProgress(4, 700, 'discovery:changed')">
   <div class="flex flex-col gap-2.5 py-1">
     {% for label in stages %}

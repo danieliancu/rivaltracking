@@ -1,8 +1,8 @@
-{% load ui %}{# Centered modal (shadcn Dialog). Extend this template:
+{% load ui %}{% comment %} Centered modal (shadcn Dialog). Extend this template:
    - block dialog_size: max-width override (default sm:max-w-lg)
    - block dialog_content: entire inner content
    - block dialog_close: override to hide the X button (e.g. staged phases)
-   Loaded into #modal-root; Alpine "overlay" animates in and removes on close. #}
+   Loaded into #modal-root; Alpine "overlay" animates in and removes on close. {% endcomment %}
 <div x-data="overlay()" @keydown.escape.window="close()" class="relative z-50">
   <div x-show="open" x-cloak
        x-transition:enter="transition-opacity ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"

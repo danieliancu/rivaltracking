@@ -1,0 +1,47 @@
+{% extends "components/sheet_shell.html" %}
+{% load ui %}
+{% comment %} Monitoring-settings drawer — monitoring-settings-drawer.tsx. Saves via
+   competitors:save_monitoring, then toasts and closes the sheet. {% endcomment %}
+
+{% block sheet_size %}sm:max-w-md{% endblock %}
+
+{% block sheet_content %}
+<div class="flex flex-col gap-1.5 p-4 pb-3">
+  <h2 class="text-base font-bold">Monitoring settings</h2>
+  <p class="text-xs text-muted-foreground">{{ row.name }} — configure how this competitor is scanned.</p>
+</div>
+
+<form hx-post="{% url 'competitors:save_monitoring' row.slug %}" hx-swap="none"
+      @htmx:after-request="$event.detail.successful && close()"
+      class="flex flex-col gap-4 px-4 pb-6">
+  <div class="flex flex-col gap-2">
+    <label for="scan-frequency" class="text-xs font-semibold">Scan frequency</label>
+    <span class="relative inline-flex w-full">
+      <select id="scan-frequency" name="frequency"
+              class="h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent py-1 pl-3 pr-7 text-xs shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+        {% for f in frequencies %}<option value="{{ f }}" {% if config.frequency == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
+      </select>
+      {% icon "chevron-down" class="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground opacity-50" %}
+    </span>
+    <p class="text-[11px] text-muted-foreground">Scheduling is handled by the monitoring backend.</p>
+  </div>
+
+  <div class="flex flex-col gap-1 rounded-xl border p-3.5">
+    {% for t in tracking_rows %}
+    <div class="flex items-center justify-between gap-3 py-1.5">
+      <span>
+        <span class="block text-xs font-semibold">{{ t.label }}</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ t.hint }}</span>
+      </span>
+      {% include "reports/partials/switch.html" with name=t.name checked=t.checked %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <button type="submit"
+          class="inline-flex h-9 w-fit items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 [.htmx-request_&]:pointer-events-none">
+    <span class="hidden items-center gap-2 [.htmx-request_&]:inline-flex">{% icon "loader-2" class="size-3.5 animate-spin" %} Saving…</span>
+    <span class="inline-flex items-center gap-2 [.htmx-request_&]:hidden">Save settings</span>
+  </button>
+</form>
+{% endblock %}

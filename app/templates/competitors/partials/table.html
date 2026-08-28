@@ -1,0 +1,107 @@
+{% load ui %}{% comment %} Monitored Competitors table fragment — competitors-table.tsx.
+   Wrapped in the URL-synced fragment root; desktop table + mobile cards. {% endcomment %}
+<div id="competitors-table" data-table-fragment
+     hx-get="{{ table_url }}" hx-trigger="competitors:changed from:body"
+     hx-target="#competitors-table" hx-swap="outerHTML" hx-include="#competitors-filter-form">
+  {# Desktop table #}
+  <div class="hidden px-0 pb-0 md:block">
+    <div class="overflow-x-auto">
+      <table class="w-full caption-bottom text-sm" style="min-width: 860px">
+        <thead>
+          <tr class="border-b">
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Competitor</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Market</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Products</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Changes</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Price Changes</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Stock Changes</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Last Scan</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Status</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr onclick="window.location.href='{% url 'competitors:detail' row.slug %}'"
+              class="cursor-pointer border-b text-[11px] text-muted-foreground transition-colors hover:bg-muted/50">
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% competitor_identity row.name row.url %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+              <span class="inline-flex w-fit items-center justify-center rounded-full border border-transparent bg-secondary px-2 py-0.5 text-[11px] font-bold text-muted-foreground">{{ row.market }}</span>
+            </td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle font-medium text-foreground">{{ row.products_display }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+              {% if row.changes_today is None %}—{% else %}<span class="font-medium text-foreground">{{ row.changes_today }}</span> today{% endif %}
+            </td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+              {% if row.price_drops is None %}—{% else %}
+              <span class="flex items-center gap-1 font-medium">
+                <span class="flex items-center text-success">{{ row.price_drops }} {% icon "arrow-down" class="size-3" %}</span>
+                <span class="text-muted-foreground/60">/</span>
+                <span class="flex items-center text-destructive">{{ row.price_increases }} {% icon "arrow-up" class="size-3" %}</span>
+              </span>
+              {% endif %}
+            </td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.stock_display }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+              {% if row.status == "scanning" %}
+              <span class="flex items-center gap-1.5 font-semibold text-info">{% icon "loader-2" class="size-3 animate-spin" %} Scanning now</span>
+              {% else %}{{ row.last_scan }}{% endif %}
+            </td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+              {% if row.note and row.status == "attention" %}
+              <span class="inline-flex" title="{{ row.note }}">{% status_badge row.status %}</span>
+              {% else %}
+              <span>{% status_badge row.status %}{% if row.note %}<span class="mt-1 block text-[11px]">{{ row.note }}</span>{% endif %}</span>
+              {% endif %}
+            </td>
+            <td class="whitespace-nowrap px-2 py-2.5 text-right align-middle">{% include "competitors/partials/row_actions.html" %}</td>
+          </tr>
+          {% endfor %}
+          {% if not rows %}
+          <tr>
+            <td colspan="9" class="px-3.5 py-8 text-center text-xs text-muted-foreground">No competitors match your search.</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {# Mobile cards #}
+  <div class="flex flex-col gap-3 px-4 pb-4 md:hidden">
+    {% for row in rows %}
+    <div class="rounded-xl border p-3.5">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0 flex-1">{% competitor_identity row.name row.url %}</div>
+        <div class="flex shrink-0 items-center gap-1">
+          {% status_badge row.status %}
+          {% include "competitors/partials/row_actions.html" %}
+        </div>
+      </div>
+      <div class="mt-3 grid grid-cols-3 gap-2 text-[10px] text-muted-foreground">
+        <div>
+          <span class="block font-medium text-foreground">{{ row.products_display }}</span>
+          Products
+        </div>
+        <div>
+          <span class="block font-medium text-foreground">{% if row.changes_today is None %}—{% else %}{{ row.changes_today }} today{% endif %}</span>
+          Changes
+        </div>
+        <div>
+          <span class="block font-medium text-foreground">
+            {% if row.status == "scanning" %}<span class="inline-flex items-center gap-1.5 text-info">{% icon "loader-2" class="size-3 animate-spin" %} Scanning now</span>{% else %}{{ row.last_scan }}{% endif %}
+          </span>
+          Last scan
+        </div>
+      </div>
+      {% if row.note %}<p class="mt-2 text-[10px] text-muted-foreground">{{ row.note }}</p>{% endif %}
+      <a href="{% url 'competitors:detail' row.slug %}"
+         class="mt-3 inline-flex h-8 w-full items-center justify-center rounded-lg border bg-background text-[10px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">View competitor</a>
+    </div>
+    {% endfor %}
+    {% if not rows %}
+    <p class="px-1 py-8 text-center text-xs text-muted-foreground">No competitors match your search.</p>
+    {% endif %}
+  </div>
+</div>
+{% for t in toasts %}{% include "partials/toast.html" with variant=t.variant title=t.title description=t.description %}{% endfor %}

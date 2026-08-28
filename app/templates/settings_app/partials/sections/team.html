@@ -1,0 +1,15 @@
+{% load ui %}{# team-section.tsx. Context: members, role_descriptions, assignable_roles. #}
+<div class="flex flex-col gap-4">
+  {% include "settings_app/partials/team_card.html" with members=members assignable_roles=assignable_roles %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Roles" subtitle=None %}
+    <div class="grid gap-3 sm:grid-cols-2">
+      {% for r in role_descriptions %}
+      <div>
+        <span class="block text-xs font-bold">{{ r.role }}</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ r.description }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  {% include "settings_app/partials/section_card_end.html" %}
+</div>

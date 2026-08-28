@@ -1,5 +1,5 @@
-{% load ui %}{# Products table fragment — products/products-table.tsx.
-   Root carries the Alpine selection state used by the bulk bar. #}
+{% load ui %}{% comment %} Products table fragment — products/products-table.tsx.
+   Root carries the Alpine selection state used by the bulk bar. {% endcomment %}
 <div id="products-table" data-table-fragment
      x-data='{ selected: {{ preselected_json }}, pageSlugs: {{ page_slugs_json }},
                get allSelected() { return this.pageSlugs.length > 0 && this.pageSlugs.every(s => this.selected.includes(s)) },

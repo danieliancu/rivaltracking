@@ -1,6 +1,6 @@
-{% load ui %}{# primitives.tsx FormField — select when options given, else input.
+{% load ui %}{% comment %} primitives.tsx FormField — select when options given, else input.
    Context: label, name, value, options (optional list of strings), error,
-   placeholder, post_url (optional → auto-save on change), x_model (optional). #}
+   placeholder, post_url (optional → auto-save on change), x_model (optional). {% endcomment %}
 <div class="flex flex-col gap-1.5">
   <label class="flex select-none items-center gap-2 text-xs font-semibold leading-none">{{ label }}</label>
   {% if options %}

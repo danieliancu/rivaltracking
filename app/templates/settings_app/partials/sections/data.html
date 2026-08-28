@@ -1,0 +1,56 @@
+{% load ui %}{# data-section.tsx. Context: stats, retention, retention_options. #}
+{% url 'settings_app:save' 'data' as save_url %}
+<div class="flex flex-col gap-4">
+  {% include "settings_app/partials/section_card_start.html" with title="Data & Privacy" subtitle="Manage your RivalTracking data and retention preferences." %}
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {% for s in stats %}
+      <div>
+        <span class="block text-sm font-medium">{{ s.value }}</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ s.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="max-w-xs border-t pt-4">
+      {% include "settings_app/partials/form_field.html" with label="Historical data retention" name="retention" value=retention options=retention_options post_url=save_url %}
+    </div>
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Export workspace data" subtitle="Export your stored competitor intelligence in a portable format." %}
+    <a href="{% url 'settings_app:data_export' %}" download
+       class="inline-flex h-8 w-fit items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "download" class="size-3.5" %} Export data
+    </a>
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Competitor monitoring" subtitle=None %}
+    <p class="flex items-start gap-2 text-[11px] leading-relaxed text-muted-foreground">
+      {% icon "shield-check" class="mt-0.5 size-3.5 shrink-0 text-success" %}
+      RivalTracking is designed to monitor information available from publicly accessible competitor pages and configured data sources.
+    </p>
+  {% include "settings_app/partials/section_card_end.html" %}
+
+  {% include "settings_app/partials/section_card_start.html" with title="Danger zone" subtitle="These actions are permanent and cannot be undone." %}
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/25 p-3.5">
+      <div>
+        <span class="block text-xs font-bold">Delete competitor data</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">This permanently removes historical monitoring data for selected competitors.</span>
+      </div>
+      <button type="button"
+              hx-get="{% url 'settings_app:data_delete_competitor' %}" hx-target="#modal-root" hx-swap="innerHTML"
+              class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-background px-3 text-[11px] font-bold text-destructive shadow-xs transition-colors hover:bg-destructive/10 hover:text-destructive">
+        {% icon "trash-2" class="size-3.5" %} Delete competitor data
+      </button>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/25 p-3.5">
+      <div>
+        <span class="block text-xs font-bold">Delete workspace</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">Permanently deletes this workspace, its competitors, history, reports and team access.</span>
+      </div>
+      <button type="button"
+              hx-get="{% url 'settings_app:data_delete_workspace' %}" hx-target="#modal-root" hx-swap="innerHTML"
+              class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-background px-3 text-[11px] font-bold text-destructive shadow-xs transition-colors hover:bg-destructive/10 hover:text-destructive">
+        {% icon "trash-2" class="size-3.5" %} Delete workspace
+      </button>
+    </div>
+  {% include "settings_app/partials/section_card_end.html" %}
+</div>

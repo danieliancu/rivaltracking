@@ -1,0 +1,8 @@
+{% comment %} ai:ask response — appended to #thread (beforeend); refreshes history +
+   the shared scope fields out-of-band, flips the card to conversation mode,
+   and scrolls the newest answer into view. {% endcomment %}
+{% if question %}{% include "ai/partials/message_user.html" with text=question %}{% endif %}
+{% if ai_message %}{% include "ai/partials/response_card.html" with m=ai_message %}{% endif %}
+<div x-data x-init="$dispatch('ask:sent'); $nextTick(() => $el.scrollIntoView({behavior: 'smooth', block: 'end'}))" class="h-0"></div>
+{% include "ai/partials/history.html" with oob=True %}
+{% include "ai/partials/ask_context.html" with oob=True %}

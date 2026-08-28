@@ -1,5 +1,5 @@
-{% load ui %}{# AI insight card — shared/ai-insight-card.tsx.
-   Context: title, cta_label, cta_href, body_template (included for the prose). #}
+{% load ui %}{% comment %} AI insight card — shared/ai-insight-card.tsx.
+   Context: title, cta_label, cta_href, body_template (included for the prose). {% endcomment %}
 <section class="bg-ai-subtle flex flex-col gap-4 rounded-2xl border border-purple/20 p-5 text-card-foreground shadow-sm md:flex-row md:items-start md:gap-3.5">
   <div class="flex min-w-0 flex-1 items-start gap-3.5">
     <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-purple/10 text-purple">{% icon "sparkles" class="size-5" %}</div>

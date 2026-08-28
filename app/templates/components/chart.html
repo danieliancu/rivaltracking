@@ -1,5 +1,5 @@
-{# Chart.js mount; static/js/charts.js boots every canvas[data-chart] on load
-   and after HTMX swaps, themed from the CSS custom properties. #}
+{% comment %} Chart.js mount; static/js/charts.js boots every canvas[data-chart] on load
+   and after HTMX swaps, themed from the CSS custom properties. {% endcomment %}
 <div class="relative w-full" style="height: {{ height }}px">
   <canvas data-chart="{{ chart_id }}" aria-label="Chart"></canvas>
   {{ payload|json_script:chart_id }}

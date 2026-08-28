@@ -1,0 +1,12 @@
+{% extends "components/dialog_shell.html" %}
+{% load ui %}
+{% comment %} Add-competitor dialog — add-competitor-dialog.tsx. The form POSTs to
+   competitors:add which swaps in the scanning phase (form → scanning → done). {% endcomment %}
+
+{% block dialog_size %}sm:max-w-md{% endblock %}
+
+{% block dialog_content %}
+<div id="add-competitor-body" class="contents">
+  {% include "competitors/partials/add_form.html" %}
+</div>
+{% endblock %}

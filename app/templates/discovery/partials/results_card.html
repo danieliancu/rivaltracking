@@ -1,5 +1,5 @@
-{% load ui %}{# Discovery results card — discovery.tsx. Re-fetches on discovery:changed
-   (fired by the staged run dialog); also returned by dismiss / not-relevant. #}
+{% load ui %}{% comment %} Discovery results card — discovery.tsx. Re-fetches on discovery:changed
+   (fired by the staged run dialog); also returned by dismiss / not-relevant. {% endcomment %}
 <div id="discovery-results"
      class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm"
      hx-get="{% url 'discovery:index' %}{{ cluster_qs }}"

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block title %}Changes — RivalTracking{% endblock %}
+
+{% block content %}
+<section class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+  <div>
+    <h1 class="text-2xl font-extrabold tracking-tight">Changes</h1>
+    <p class="mt-1 text-xs text-muted-foreground">Track every meaningful change detected across your competitors.</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="{% url 'changes:export' %}?{{ request.GET.urlencode }}"
+       class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-card px-4 text-xs font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "download" class="size-4" %} Export
+    </a>
+    <a href="{% url 'changes:ask_ai' %}?{{ request.GET.urlencode }}"
+       class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-md shadow-primary/25 transition-colors hover:bg-primary/90">
+      {% icon "sparkles" class="size-4" %} Ask AI about changes
+    </a>
+  </div>
+</section>
+
+<section class="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-6">
+  {% for k in kpis %}{% kpi_card k.icon k.tone k.value k.label %}{% endfor %}
+</section>
+
+{% include "components/ai_insight_card.html" with title="AI Change Summary" cta_label="View strategic analysis" cta_href="/ask-ai/?prompt=Analyse+these+changes&competitor=ToyWorld.co.uk&period=Last+7+days" body_template="changes/partials/ai_summary_body.html" %}
+
+{% include "changes/partials/patterns.html" %}
+
+{% include "changes/partials/events_table.html" %}
+
+<section class="grid gap-4 xl:grid-cols-2 xl:items-start">
+  {% include "changes/partials/activity_card.html" %}
+  <div class="flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm">
+    <div class="flex flex-col gap-1.5 px-6">
+      <h2 class="text-sm font-bold leading-none">Most Active Competitors</h2>
+      <p class="text-xs text-muted-foreground">Detected changes per competitor today</p>
+    </div>
+    <div class="px-6">
+      {% chart "change-competitors" charts.competitors 190 %}
+    </div>
+  </div>
+</section>
+{% endblock %}

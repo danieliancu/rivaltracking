@@ -1,0 +1,84 @@
+{% load ui %}{% comment %} Scheduled Reports card — reports/scheduled-reports.tsx.
+   Returned as a fragment (id scheduled-reports-fragment) by save/toggle/delete
+   schedule mutations. Context: scheduled ([{s, type}]), toast (optional). {% endcomment %}
+<div id="scheduled-reports-fragment">
+  <div class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+    <div class="grid grid-cols-[1fr_auto] items-start gap-2 px-6 pb-4">
+      <h2 class="text-sm font-bold leading-none">Scheduled Reports</h2>
+      <button type="button" hx-get="{% url 'reports:schedule_dialog' %}" hx-target="#modal-root" hx-swap="innerHTML"
+              class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+        {% icon "calendar-clock" class="size-3.5" %} Schedule report
+      </button>
+    </div>
+
+    {% if scheduled %}
+    {% for row in scheduled %}
+    <div class="flex items-center gap-2.5 border-t px-5 py-3">
+      <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {% if row.type %}{{ row.type.tone }}{% else %}bg-muted text-muted-foreground{% endif %}">
+        {% icon row.type.icon|default:"calendar-clock" class="size-4" %}
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-medium">{{ row.s.name }}</span>
+        <span class="mt-0.5 block truncate text-[11px] text-muted-foreground">{{ row.s.frequency }} · {{ row.s.time }} · {{ row.s.competitors }}</span>
+      </span>
+      <span class="inline-flex w-fit shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-1 text-[11px] font-bold {% if row.s.active %}border-success/25 bg-success/10 text-success{% else %}border-border bg-muted text-muted-foreground{% endif %}">
+        <i class="size-1.5 rounded-full {% if row.s.active %}bg-success{% else %}bg-muted-foreground{% endif %}"></i>{% if row.s.active %}Active{% else %}Paused{% endif %}
+      </span>
+
+      <div x-data="{ confirm: false }" @keydown.escape.window="confirm = false" class="relative inline-flex">
+        <div x-data="menu()" @click.outside="close()" class="relative">
+          <button type="button" @click.stop="toggle()" aria-label="Actions for {{ row.s.name }} schedule"
+                  class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+            {% icon "more-horizontal" class="size-4" %}
+          </button>
+          <div x-show="open" x-cloak x-transition.opacity.duration.100ms @click.stop
+               class="absolute right-0 top-8 z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+            <button type="button" hx-get="{% url 'reports:schedule_dialog' %}?edit={{ row.s.id }}" hx-target="#modal-root" hx-swap="innerHTML" @click="close()"
+                    class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+              {% icon "pencil" class="size-3.5" %} Edit
+            </button>
+            <button type="button" hx-post="{% url 'reports:toggle_schedule' row.s.id %}" hx-target="#scheduled-reports-fragment" hx-swap="outerHTML" @click="close()"
+                    class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+              {% if row.s.active %}{% icon "pause" class="size-3.5" %} Pause{% else %}{% icon "play" class="size-3.5" %} Resume{% endif %}
+            </button>
+            <div class="-mx-1 my-1 h-px bg-border"></div>
+            <button type="button" @click="close(); confirm = true"
+                    class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive outline-hidden hover:bg-accent hover:text-accent-foreground">
+              {% icon "trash-2" class="size-3.5" %} Delete
+            </button>
+          </div>
+        </div>
+
+        <template x-if="confirm">
+          <div>
+            <div class="fixed inset-0 z-50 bg-black/50" @click="confirm = false"></div>
+            <div class="fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg sm:max-w-lg">
+              <div class="flex flex-col gap-2 text-center sm:text-left">
+                <h2 class="text-base font-semibold">Delete scheduled report?</h2>
+                <p class="text-xs text-muted-foreground">{{ row.s.name }} will no longer be generated automatically. Already generated reports are not affected.</p>
+              </div>
+              <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" @click="confirm = false"
+                        class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-card px-4 text-xs font-semibold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">Cancel</button>
+                <button type="button" hx-post="{% url 'reports:delete_schedule' row.s.id %}" hx-target="#scheduled-reports-fragment" hx-swap="outerHTML" @click="confirm = false"
+                        class="inline-flex h-9 items-center justify-center rounded-md bg-destructive px-4 text-xs font-bold text-destructive-foreground hover:bg-destructive/90">Delete schedule</button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    {% empty_state icon="calendar-clock" heading="No scheduled reports" text="Schedule a report and RivalTracking will generate it automatically." action_label="Schedule report" action_href="?schedule=1" %}
+    {% endif %}
+
+    <div class="border-t p-0">
+      <button type="button" hx-get="{% url 'reports:schedule_dialog' %}" hx-target="#modal-root" hx-swap="innerHTML"
+              class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-none text-[11px] font-bold text-primary transition-colors hover:bg-accent">
+        {% icon "plus" class="size-3.5" %} Schedule report
+      </button>
+    </div>
+  </div>
+</div>
+{% if toast %}{% include "partials/toast.html" with variant=toast.variant title=toast.title description=toast.description %}{% endif %}

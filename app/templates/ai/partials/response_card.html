@@ -1,0 +1,28 @@
+{% load ui %}{# ai-response.tsx — structured AI answer card. Context: m (ai message dict). #}
+{% with r=m.response %}
+<div class="flex flex-col gap-3.5 rounded-2xl border bg-card p-4 shadow-sm sm:p-5">
+  <div class="flex items-start gap-2.5">
+    <span class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-purple/10 text-purple">
+      {% icon "sparkles" class="size-3.5" %}
+    </span>
+    <div class="min-w-0">
+      <h2 class="text-sm font-bold">{{ r.heading }}</h2>
+      {% if r.summary %}<p class="mt-1 text-xs leading-relaxed text-foreground/80">{{ r.summary }}</p>{% endif %}
+    </div>
+  </div>
+
+  {% if r.bullets %}{% include "ai/partials/blocks/bullets.html" %}{% endif %}
+  {% if r.metrics %}{% include "ai/partials/blocks/metrics.html" %}{% endif %}
+  {% if r.product_list %}{% include "ai/partials/blocks/product_list.html" %}{% endif %}
+  {% if r.comparison_table %}{% include "ai/partials/blocks/comparison_table.html" %}{% endif %}
+  {% if r.chart %}{% include "ai/partials/blocks/chart.html" %}{% endif %}
+  {% if r.interpretation %}{% include "ai/partials/blocks/interpretation.html" %}{% endif %}
+  {% if r.recommendations %}{% include "ai/partials/blocks/recommendations.html" %}{% endif %}
+  {% if r.next_step %}{% include "ai/partials/blocks/next_step.html" %}{% endif %}
+  {% if r.caveat %}{% include "ai/partials/blocks/caveat.html" %}{% endif %}
+
+  {% include "ai/partials/blocks/evidence.html" %}
+  {% include "ai/partials/blocks/footer.html" %}
+  {% include "ai/partials/blocks/follow_ups.html" %}
+</div>
+{% endwith %}

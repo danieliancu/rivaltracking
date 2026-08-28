@@ -1,0 +1,15 @@
+{% extends "components/dialog_shell.html" %}
+{% load ui %}{# billing-section.tsx manage-plan Dialog (honest placeholder copy). #}
+{% block dialog_size %}sm:max-w-sm{% endblock %}
+{% block dialog_content %}
+<div class="flex flex-col gap-2 text-center sm:text-left">
+  <h2 class="text-base font-bold leading-none">Manage plan</h2>
+  <p class="text-xs text-muted-foreground">Billing backend is not connected yet. Plan changes, invoices and payment methods will be handled here once billing is integrated.</p>
+</div>
+<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+  <button type="button" @click="close()"
+          class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-background px-4 text-xs font-semibold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+    Close
+  </button>
+</div>
+{% endblock %}

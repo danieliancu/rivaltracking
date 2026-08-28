@@ -1,0 +1,4 @@
+{% comment %} Team mutation response: OOB team-card refresh + OOB toast. The main (non-OOB)
+   body is empty, so swapping this into #modal-root clears/closes any open dialog. {% endcomment %}
+{% include "settings_app/partials/team_card.html" with members=members assignable_roles=assignable_roles oob=True %}
+{% include "partials/toast.html" with variant=toast.variant title=toast.title description=toast.description %}

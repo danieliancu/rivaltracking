@@ -1,0 +1,23 @@
+{% extends "components/dialog_shell.html" %}
+{% load ui %}{# team-section.tsx remove AlertDialog. Context: member. #}
+{% block dialog_size %}sm:max-w-lg{% endblock %}
+{% block dialog_close %}{% endblock %}
+{% block dialog_content %}
+<div class="flex flex-col gap-2 text-center sm:text-left">
+  <h2 class="text-base font-semibold leading-none">Remove {{ member.name }}?</h2>
+  <p class="text-xs text-muted-foreground">{{ member.email }} will lose access to this workspace immediately.</p>
+</div>
+<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+  <button type="button" @click="close()"
+          class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-background px-4 text-xs font-semibold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+    Cancel
+  </button>
+  <form hx-post="{% url 'settings_app:team_remove' member.id %}" hx-target="#modal-root" hx-swap="innerHTML">
+    {% csrf_token %}
+    <button type="submit"
+            class="inline-flex h-9 items-center justify-center rounded-md bg-destructive px-4 text-xs font-bold text-destructive-foreground transition-colors hover:bg-destructive/90">
+      Remove member
+    </button>
+  </form>
+</div>
+{% endblock %}

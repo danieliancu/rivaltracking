@@ -1,0 +1,18 @@
+{% load ui %}{# ai-response.tsx evidence (outline links) + actions (filled) #}
+<div>
+  <p class="mb-1.5 text-xs font-bold">Evidence</p>
+  <div class="flex flex-wrap gap-1.5">
+    {% for e in r.evidence %}
+    <a href="{{ e.to }}"
+       class="inline-flex h-8 items-center justify-center gap-2 rounded-lg border bg-background px-3 text-[11px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {{ e.label }} {% icon "arrow-right" class="size-3" %}
+    </a>
+    {% endfor %}
+    {% for a in m.actions %}
+    <a href="{{ a.href }}"
+       class="inline-flex h-8 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-[11px] font-bold text-primary-foreground shadow-md shadow-primary/25 transition-colors hover:bg-primary/90">
+      {% icon a.icon class="size-3.5" %} {{ a.label }}
+    </a>
+    {% endfor %}
+  </div>
+</div>

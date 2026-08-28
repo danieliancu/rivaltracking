@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load ui %}
+
+{% block title %}Reports — RivalTracking{% endblock %}
+
+{% block content %}
+<section class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+  <div>
+    <h1 class="text-2xl font-extrabold tracking-tight">Reports</h1>
+    <p class="mt-1 text-xs text-muted-foreground">Turn competitor activity into clear, actionable intelligence.</p>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="/settings/reports/"
+       class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-card px-4 text-xs font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+      {% icon "settings-2" class="size-4" %} Report settings
+    </a>
+    <button type="button" hx-get="{% url 'reports:create_dialog' %}" hx-target="#modal-root" hx-swap="innerHTML"
+            class="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-md shadow-primary/25 transition-colors hover:bg-primary/90">
+      {% icon "plus" class="size-4" %} Create report
+    </button>
+  </div>
+</section>
+
+<section class="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
+  {% for k in kpis %}{% kpi_card k.icon k.tone k.value k.label %}{% endfor %}
+</section>
+
+{% include "reports/partials/report_library.html" %}
+
+{% include "reports/partials/generated_reports.html" %}
+
+{% include "reports/partials/scheduled_reports.html" %}
+
+{% if open_create %}
+{% include "reports/partials/create_dialog.html" with initial=open_create.initial type_options=open_create.type_options competitor_options=open_create.competitor_options date_range_options=open_create.date_range_options category_options=open_create.category_options change_type_options=open_create.change_type_options historical_since=open_create.historical_since stages=open_create.stages %}
+{% endif %}
+{% if open_schedule %}
+{% include "reports/partials/schedule_dialog.html" with initial=open_schedule.initial schedule=open_schedule.schedule type_options=open_schedule.type_options competitor_options=open_schedule.competitor_options frequency_options=open_schedule.frequency_options time_options=open_schedule.time_options %}
+{% endif %}
+{% endblock %}

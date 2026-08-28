@@ -1,5 +1,5 @@
-{# shadcn Switch as a styled checkbox — ui/switch.tsx look via peer classes.
-   Context: name, input_id, checked. #}
+{% comment %} shadcn Switch as a styled checkbox — ui/switch.tsx look via peer classes.
+   Context: name, input_id, checked. {% endcomment %}
 <span class="relative inline-flex h-[1.15rem] w-8 shrink-0">
   <input type="checkbox" name="{{ name }}"{% if input_id %} id="{{ input_id }}"{% endif %}{% if checked %} checked{% endif %}
          class="peer absolute inset-0 z-10 size-full cursor-pointer appearance-none rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">

@@ -1,0 +1,14 @@
+{% load ui %}{% comment %} IntelligenceCard — report-details.tsx. Context: section
+   ({title, facts:[{label,value}], ai_note}). {% endcomment %}
+<div class="flex flex-col gap-3 rounded-xl border bg-card p-4 text-card-foreground shadow-sm">
+  <h3 class="text-sm font-bold">{{ section.title }}</h3>
+  <div class="grid grid-cols-2 gap-x-3 gap-y-2.5">
+    {% for f in section.facts %}
+    <div>
+      <span class="block text-sm font-medium">{{ f.value }}</span>
+      <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ f.label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% include "reports/partials/ai_note.html" with text=section.ai_note %}
+</div>

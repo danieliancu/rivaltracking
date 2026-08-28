@@ -1,5 +1,5 @@
-{% load ui %}{# Rich Discovery-page result row — discovery.tsx (the dashboard uses
-   components/company_discovery_row.html instead). Context: d, cluster_qs. #}
+{% load ui %}{% comment %} Rich Discovery-page result row — discovery.tsx (the dashboard uses
+   components/company_discovery_row.html instead). Context: d, cluster_qs. {% endcomment %}
 <div id="discovery-row-{{ d.slug }}" data-page-discovery-row class="flex items-center gap-2.5 border-t px-5 py-3">
   <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {{ d|discovery_tone }}">{% icon "store" class="size-4" %}</span>
   <button type="button" aria-label="Why is {{ d.name }} a match?"

@@ -1,0 +1,43 @@
+{% load ui %}{% comment %} conversation-history.tsx — Conversations card.
+   Context: conversations, active_id; optional panel_id (default ai-history), oob. {% endcomment %}
+<div id="{{ panel_id|default:'ai-history' }}"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <div class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pt-6 pb-0 text-card-foreground shadow-sm">
+    <div class="px-6 pb-3">
+      <h2 class="text-sm font-bold">Conversations</h2>
+    </div>
+    {% for c in conversations %}
+    <div class="group relative flex w-full items-center gap-1.5 border-t px-4 py-2.5 text-left hover:bg-muted/50{% if c.id == active_id %} bg-accent/60{% endif %}">
+      <a href="?c={{ c.id }}" class="min-w-0 flex-1">
+        <span class="block truncate text-sm font-medium">{{ c.title }}</span>
+        <span class="mt-0.5 block text-[11px] text-muted-foreground">{{ c.when }}</span>
+      </a>
+      <div class="relative" x-data="menu()" @click.outside="close()">
+        <button type="button" @click.stop="toggle()" aria-label="Conversation actions"
+                class="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100">
+          {% icon "more-horizontal" class="size-3.5" %}
+        </button>
+        <div x-show="open" x-cloak x-transition.opacity.duration.100ms
+             class="absolute right-0 top-8 z-50 w-40 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+          <a href="?c={{ c.id }}"
+             class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">Open</a>
+          <button type="button" @click="$dispatch('open-rename', {id: '{{ c.id }}', title: '{{ c.title|escapejs }}'}); close()"
+                  class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+            {% icon "pencil" class="size-3.5" %} Rename
+          </button>
+          <div class="-mx-1 my-1 h-px bg-border"></div>
+          <button type="button" @click="$dispatch('open-delete', {id: '{{ c.id }}', title: '{{ c.title|escapejs }}'}); close()"
+                  class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm text-destructive outline-hidden hover:bg-accent hover:text-accent-foreground">
+            {% icon "trash-2" class="size-3.5" %} Delete
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    <div class="border-t p-0">
+      <a href="{% url 'ai:index' %}"
+         class="inline-flex h-10 w-full items-center justify-center gap-2 rounded-none text-[11px] font-bold text-primary transition-colors hover:bg-accent">
+        {% icon "plus" class="size-3.5" %} New conversation
+      </a>
+    </div>
+  </div>
+</div>

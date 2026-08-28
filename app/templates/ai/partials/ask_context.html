@@ -1,0 +1,6 @@
+{% comment %} Hidden scope fields pulled into every ask (hx-include="#ask-context").
+   Refreshed out-of-band after an ask so follow-ups stay in the conversation. {% endcomment %}
+<div id="ask-context"{% if oob %} hx-swap-oob="true"{% endif %} hidden>
+  {% if active_id %}<input type="hidden" name="c" value="{{ active_id }}">{% endif %}
+  {% for key, value in context_query.items %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+</div>

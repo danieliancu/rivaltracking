@@ -1,0 +1,23 @@
+{# ai-response.tsx comparisonTable #}
+<div class="overflow-x-auto rounded-xl border">
+  <table class="w-full caption-bottom text-sm" style="min-width: 420px">
+    <thead>
+      <tr class="border-b">
+        <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Competitor</th>
+        <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Changes</th>
+        <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Price Drops</th>
+        <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">New Products</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in r.comparison_table %}
+      <tr class="border-b text-[11px] text-muted-foreground">
+        <td class="px-3.5 py-2 align-middle text-sm font-medium text-foreground">{{ row.competitor }}</td>
+        <td class="px-3.5 py-2 align-middle font-medium text-foreground">{{ row.changes }}</td>
+        <td class="px-3.5 py-2 align-middle font-medium text-success">{{ row.drops }}</td>
+        <td class="px-3.5 py-2 align-middle">{{ row.new_products }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

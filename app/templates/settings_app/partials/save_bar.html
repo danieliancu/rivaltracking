@@ -1,5 +1,5 @@
-{% load ui %}{# primitives.tsx SaveBar — lives inside the workspace form's Alpine scope
-   (dirty / saved flags). Shown while dirty; shows a transient "Saved" state after save. #}
+{% load ui %}{% comment %} primitives.tsx SaveBar — lives inside the workspace form's Alpine scope
+   (dirty / saved flags). Shown while dirty; shows a transient "Saved" state after save. {% endcomment %}
 <div x-cloak x-show="dirty || saved"
      class="flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-accent px-3.5 py-2.5">
   <template x-if="dirty">

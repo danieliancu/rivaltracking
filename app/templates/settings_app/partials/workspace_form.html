@@ -1,5 +1,5 @@
-{# Workspace card form — explicit save via SaveBar (workspace-section.tsx).
-   Context: w (workspace values), options, website_error (optional), saved (optional). #}
+{% comment %} Workspace card form — explicit save via SaveBar (workspace-section.tsx).
+   Context: w (workspace values), options, website_error (optional), saved (optional). {% endcomment %}
 <form id="workspace-form" class="contents"
       x-data="{ dirty: false, saved: {{ saved|yesno:'true,false' }} }"
       x-init="if (saved) setTimeout(() => saved = false, 1600)"

@@ -1,0 +1,7 @@
+{% comment %} open-alert response: detail drawer into #drawer-root (primary swap) +
+   OOB recent-alerts fragment (row now "viewed") + OOB sidebar unread badges.
+   Context: drawer_context + recent_context + unread_count. {% endcomment %}
+{% include "alerts/partials/alert_drawer.html" %}
+{% include "alerts/partials/recent_table.html" with oob=True %}
+{% include "partials/sidebar_badge.html" with badge_id="sidebar-alerts-badge" oob=True %}
+{% include "partials/sidebar_badge.html" with badge_id="sidebar-alerts-badge-mobile" oob=True %}

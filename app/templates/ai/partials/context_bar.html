@@ -1,0 +1,55 @@
+{% load ui %}{# ai-context-bar.tsx — scope chips + three scope selects. #}
+<div class="flex flex-wrap items-center gap-1.5">
+  <span class="text-[11px] font-semibold text-muted-foreground">Context:</span>
+  {% if not context_chips %}
+  <span class="text-[11px] text-muted-foreground">All monitored data</span>
+  {% endif %}
+  {% for chip in context_chips %}
+  <span class="inline-flex items-center gap-1 rounded-full border border-info/25 bg-info/10 px-2 py-0.5 text-[11px] font-bold text-info">
+    {{ chip.value }}
+    <a href="{{ chip.remove_url }}" aria-label="Remove {{ chip.key }} context" class="ml-0.5 opacity-70 hover:opacity-100">
+      {% icon "x" class="size-3" %}
+    </a>
+  </span>
+  {% endfor %}
+
+  <form method="get" action="{% url 'ai:index' %}" class="ml-auto flex items-center gap-1.5">
+    {% if active_id %}<input type="hidden" name="c" value="{{ active_id }}">{% endif %}
+    {% if context.product %}<input type="hidden" name="product" value="{{ context.product }}">{% endif %}
+    {% if context.scope %}<input type="hidden" name="scope" value="{{ context.scope }}">{% endif %}
+    {% if context.candidate %}<input type="hidden" name="candidate" value="1">{% endif %}
+
+    <span class="relative">
+      <select name="competitor" onchange="this.form.submit()"
+              class="h-7 appearance-none rounded-md border border-input bg-transparent pl-2.5 pr-7 text-[10px] font-semibold text-muted-foreground shadow-xs outline-none focus-visible:border-ring">
+        <option value="" {% if not context.competitor %}selected{% endif %}>Competitor</option>
+        {% for opt in competitor_options %}
+        <option value="{{ opt }}" {% if context.competitor == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+      {% icon "chevron-down" class="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" %}
+    </span>
+
+    <span class="relative">
+      <select name="period" onchange="this.form.submit()"
+              class="h-7 appearance-none rounded-md border border-input bg-transparent pl-2.5 pr-7 text-[10px] font-semibold text-muted-foreground shadow-xs outline-none focus-visible:border-ring">
+        <option value="" {% if not context.period %}selected{% endif %}>Date</option>
+        {% for opt in period_options %}
+        <option value="{{ opt }}" {% if context.period == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+      {% icon "chevron-down" class="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" %}
+    </span>
+
+    <span class="relative">
+      <select name="category" onchange="this.form.submit()"
+              class="h-7 appearance-none rounded-md border border-input bg-transparent pl-2.5 pr-7 text-[10px] font-semibold text-muted-foreground shadow-xs outline-none focus-visible:border-ring">
+        <option value="" {% if not context.category %}selected{% endif %}>Category</option>
+        {% for opt in category_options %}
+        <option value="{{ opt }}" {% if context.category == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+      {% icon "chevron-down" class="pointer-events-none absolute right-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground" %}
+    </span>
+  </form>
+</div>

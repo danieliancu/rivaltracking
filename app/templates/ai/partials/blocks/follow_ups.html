@@ -1,0 +1,13 @@
+{# ai-response.tsx followUps — each re-asks via ai:ask #}
+<div class="flex flex-wrap gap-1.5">
+  {% for f in r.follow_ups %}
+  <form hx-post="{% url 'ai:ask' %}" hx-include="#ask-context"
+        hx-target="#thread" hx-swap="beforeend" class="contents">
+    <input type="hidden" name="question" value="{{ f }}">
+    <button type="submit"
+            class="rounded-full border bg-background px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
+      {{ f }}
+    </button>
+  </form>
+  {% endfor %}
+</div>

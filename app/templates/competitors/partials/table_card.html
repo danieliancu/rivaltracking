@@ -1,0 +1,27 @@
+{% load ui %}{% comment %} Monitored Competitors card — competitors/competitors-table.tsx.
+   Header filter cluster (search + status tabs + sort) URL-syncs the fragment. {% endcomment %}
+<div class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+  <div class="grid grid-cols-[1fr_auto] items-start gap-3 px-6 pb-4 max-md:grid-cols-1">
+    <h2 class="text-sm font-bold leading-none">Monitored Competitors</h2>
+    <form id="competitors-filter-form"
+          hx-get="{{ table_url }}" hx-target="#competitors-table" hx-swap="outerHTML" hx-push-url="true"
+          hx-trigger="input delay:300ms from:find input, change" hx-include="this"
+          class="flex flex-wrap items-center gap-2 max-md:justify-start md:justify-end">
+      <div class="relative">
+        {% icon "search" class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" %}
+        <input name="q" value="{{ filters.q }}" placeholder="Search competitors..." autocomplete="off"
+               class="h-8 w-44 rounded-md border border-input bg-transparent py-1 pl-8 pr-3 text-[11px] shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+      </div>
+      <div class="inline-flex h-8 w-fit items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground">
+        {% for f in status_tabs %}
+        <label class="inline-flex h-full cursor-pointer items-center justify-center rounded-md px-2.5 text-[10px] font-semibold capitalize transition-colors has-[:checked]:bg-primary has-[:checked]:text-primary-foreground has-[:checked]:shadow-sm">
+          <input type="radio" name="status" value="{{ f }}" class="sr-only" {% if filters.status == f %}checked{% endif %}>
+          {{ f }}
+        </label>
+        {% endfor %}
+      </div>
+      {% filter_select "sort" sort_options filters.sort "w-36" "Sort competitors" %}
+    </form>
+  </div>
+  {% include "competitors/partials/table.html" %}
+</div>

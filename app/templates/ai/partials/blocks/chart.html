@@ -1,0 +1,5 @@
+{% load ui %}{# ai-response.tsx chart — vertical bar, barSize 38, chart-1 #}
+<div class="rounded-xl border p-3">
+  <p class="mb-2 text-[11px] font-bold text-muted-foreground">{{ r.chart.title }}</p>
+  {% chart m.chart_id m.chart_payload 160 %}
+</div>

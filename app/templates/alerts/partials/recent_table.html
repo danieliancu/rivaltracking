@@ -1,7 +1,7 @@
-{% load ui %}{# recent-alerts-table.tsx — whole card is the fragment so mark-read
+{% load ui %}{% comment %} recent-alerts-table.tsx — whole card is the fragment so mark-read
    responses can refresh rows, the filter line and the mark-all button state.
    Context: recent_alerts, rule_filter, unread_count (context processor);
-   oob=True adds hx-swap-oob for open-alert responses. #}
+   oob=True adds hx-swap-oob for open-alert responses. {% endcomment %}
 <section id="recent-alerts-fragment" data-table-fragment{% if oob %} hx-swap-oob="true"{% endif %}
          class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
   <div class="grid grid-cols-[1fr_auto] items-start gap-2 px-6 pb-4">

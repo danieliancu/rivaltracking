@@ -1,0 +1,6 @@
+{% comment %} mark-read / mark-all-read response: refreshed recent-alerts fragment
+   (primary swap into #recent-alerts-fragment) + OOB sidebar unread badges.
+   Context: recent_alerts, rule_filter, unread_count (context processor). {% endcomment %}
+{% include "alerts/partials/recent_table.html" %}
+{% include "partials/sidebar_badge.html" with badge_id="sidebar-alerts-badge" oob=True %}
+{% include "partials/sidebar_badge.html" with badge_id="sidebar-alerts-badge-mobile" oob=True %}

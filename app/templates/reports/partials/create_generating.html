@@ -1,0 +1,32 @@
+{% load ui %}{% comment %} Generating + done phases of the create-report dialog —
+   create-report-dialog.tsx. create_report already ran server-side;
+   stagedProgress animates the checklist, fires reports:changed when done
+   (refreshing the Generated Reports card), then reveals "View report". {% endcomment %}
+<div class="contents" x-data="stagedProgress(5, 650, 'reports:changed')">
+  <div x-show="!done" x-cloak class="flex flex-col gap-2 text-center sm:text-left">
+    <h2 class="text-base font-bold">Create report</h2>
+    <p class="text-xs text-muted-foreground">Facts are calculated from your verified competitor data; AI adds interpretation on top.</p>
+  </div>
+
+  <div x-show="!done" x-cloak class="flex flex-col gap-2.5 py-1">
+    <p class="text-xs font-bold">Preparing report</p>
+    {% for label in stages %}
+    <div class="flex items-center gap-2.5 text-xs font-semibold"
+         :class="stage > {{ forloop.counter0 }} ? 'text-success' : stage === {{ forloop.counter0 }} ? 'text-foreground' : 'text-muted-foreground/50'">
+      <span x-show="stage > {{ forloop.counter0 }}" x-cloak>{% icon "check" class="size-4 text-success" %}</span>
+      <span x-show="stage === {{ forloop.counter0 }}" x-cloak>{% icon "loader-2" class="size-4 animate-spin text-primary" %}</span>
+      <span x-show="stage < {{ forloop.counter0 }}" x-cloak><i class="block size-4 rounded-full border border-border"></i></span>
+      {{ label }}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div x-show="done" x-cloak class="flex flex-col items-center gap-1 py-2 text-center">
+    {% icon "check-circle-2" class="mb-1 size-10 text-success" %}
+    <p class="text-sm font-bold">Report ready</p>
+    <p class="text-xs text-muted-foreground">Your report has been generated from verified competitor data.</p>
+    <a href="{% url 'reports:detail' report.id %}"
+       class="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90">View report</a>
+  </div>
+</div>
+{% include "partials/toast.html" with variant=toast.variant title=toast.title description=toast.description %}

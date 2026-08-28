@@ -1,0 +1,5 @@
+{% comment %} Rule mutation response: refreshed rules-table fragment + OOB toast.
+   Swapped into #alert-rules-fragment (outerHTML) by create/update/toggle/
+   duplicate/delete. Context: rules-table context + toast_* strings. {% endcomment %}
+{% include "alerts/partials/rules_table.html" %}
+{% include "partials/toast.html" with variant=toast_variant title=toast_title description=toast_description %}

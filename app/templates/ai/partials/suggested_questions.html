@@ -1,0 +1,40 @@
+{% load ui %}{# suggested-questions.tsx — canned prompts + today's activity cards. #}
+<div class="flex w-full max-w-2xl flex-col gap-5">
+  <div class="flex flex-wrap justify-center gap-1.5">
+    {% for s in suggested_questions %}
+    <form hx-post="{% url 'ai:ask' %}" hx-include="#ask-context"
+          hx-target="#thread" hx-swap="beforeend" class="contents">
+      <input type="hidden" name="question" value="{{ s.question }}">
+      <button type="submit"
+              class="rounded-full border bg-card px-3 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground">
+        <span class="mr-1.5 text-primary">{{ s.category }}</span>{{ s.question }}
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+
+  <div>
+    <p class="mb-2 text-center text-[11px] font-bold text-muted-foreground">Suggested from today's activity</p>
+    <div class="grid gap-2.5 sm:grid-cols-3">
+      {% for a in activity_suggestions %}
+      <div class="rounded-xl border bg-card p-3">
+        <div class="flex items-center gap-2">
+          <span class="flex size-7 shrink-0 items-center justify-center rounded-lg {{ a.tone }}">
+            {% icon "zap" class="size-3.5" %}
+          </span>
+          <span class="truncate text-xs font-bold">{{ a.title }}</span>
+        </div>
+        <p class="mt-1.5 text-[11px] text-muted-foreground">{{ a.detail }}</p>
+        <form hx-post="{% url 'ai:ask' %}" hx-include="#ask-context"
+              hx-target="#thread" hx-swap="beforeend" class="contents">
+          <input type="hidden" name="question" value="{{ a.prompt }}">
+          <button type="submit"
+                  class="mt-1 inline-flex h-7 items-center gap-2 rounded-lg px-1.5 text-[11px] font-bold text-primary transition-colors hover:bg-accent">
+            {{ a.cta }} {% icon "arrow-right" class="size-3" %}
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>

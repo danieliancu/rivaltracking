@@ -1,0 +1,6 @@
+{% load ai_extras %}{# ai-response.tsx bullets #}
+<ul class="flex flex-col gap-1 pl-9 text-xs text-muted-foreground">
+  {% for b in r.bullets %}
+  <li class="list-disc">{{ b|richtext }}</li>
+  {% endfor %}
+</ul>

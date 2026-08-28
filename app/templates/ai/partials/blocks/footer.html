@@ -1,0 +1,4 @@
+{% load ui %}{# ai-response.tsx footer — data-through + optional last scan #}
+<p class="flex items-center gap-1 border-t pt-2.5 text-[11px] text-muted-foreground">
+  {% icon "clock-3" class="size-3" %} Data through {{ r.data_through }}{% if r.last_scan %} · {{ r.last_scan }}{% endif %}
+</p>

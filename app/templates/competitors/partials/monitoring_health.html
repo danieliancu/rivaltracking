@@ -1,0 +1,26 @@
+{% load ui %}{# Monitoring Health — competitors/monitoring-health.tsx. #}
+<div class="flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm">
+  <div class="px-6">
+    <h2 class="text-sm font-bold leading-none">Monitoring Health</h2>
+  </div>
+  <div class="flex flex-col gap-4 px-6">
+    <div class="grid grid-cols-2 gap-x-3 gap-y-4 md:grid-cols-4">
+      {% for s in health.stats %}
+      <div class="flex items-start gap-2">
+        {% icon s.icon class=s.icon_class %}
+        <span>
+          <span class="block text-xs font-bold">{{ s.value }}</span>
+          <span class="mt-0.5 block text-[10px] text-muted-foreground">{{ s.label }}</span>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    <div>
+      <div class="flex h-2 w-full gap-1 overflow-hidden rounded-full">
+        <div class="rounded-full bg-success" style="width: {{ health.healthy_share }}%"></div>
+        <div class="flex-1 rounded-full bg-warning"></div>
+      </div>
+      <p class="mt-2 text-[10px] text-muted-foreground">{{ health.healthy }} of {{ health.total }} competitors are scanning without issues.</p>
+    </div>
+  </div>
+</div>

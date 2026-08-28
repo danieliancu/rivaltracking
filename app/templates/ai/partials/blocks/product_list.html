@@ -1,0 +1,17 @@
+{% load ui %}{# ai-response.tsx productList — clickable rows → /products/<slug> #}
+<div class="rounded-xl border">
+  <p class="border-b px-3.5 py-2.5 text-[11px] font-bold text-muted-foreground">{{ r.product_list.title }}</p>
+  {% for p in r.product_list.items %}
+  <a href="/products/{{ p.slug }}"
+     class="flex w-full items-center gap-2.5 border-b px-3.5 py-2.5 text-left last:border-b-0 hover:bg-muted/50">
+    <span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">{{ forloop.counter }}</span>
+    <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ p.name }}</span>
+    <span class="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+      <span class="line-through decoration-muted-foreground/40">{{ p.from }}</span>
+      {% icon "move-right" class="size-3 text-muted-foreground/50" %}
+      <span class="font-medium text-foreground">{{ p.to }}</span>
+    </span>
+    <span class="text-[11px] font-bold text-success">{{ p.pct }}</span>
+  </a>
+  {% endfor %}
+</div>

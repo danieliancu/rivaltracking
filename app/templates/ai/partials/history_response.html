@@ -1,0 +1,3 @@
+{# ai:rename / ai:delete response — OOB history refresh + toast (main swap none). #}
+{% include "ai/partials/history.html" with oob=True %}
+{% if toast %}{% include "partials/toast.html" with variant=toast.variant title=toast.title description=toast.description %}{% endif %}

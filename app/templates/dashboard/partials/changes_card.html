@@ -1,5 +1,5 @@
-{% load ui %}{# Recent Change Events card (dashboard/changes-table.tsx) —
-   reused on competitor details with different title/kinds via context. #}
+{% load ui %}{% comment %} Recent Change Events card (dashboard/changes-table.tsx) —
+   reused on competitor details with different title/kinds via context. {% endcomment %}
 <div class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
   <div class="flex flex-col gap-1.5 px-6 pb-4">
     <h2 class="text-sm font-bold leading-none">{{ table_title|default:"Recent Change Events" }}</h2>

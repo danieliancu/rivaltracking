@@ -47,6 +47,22 @@ def add_competitor(request, url):
     return row
 
 
+def run_scan(request, slug):
+    """Future: POST /api/competitors/:id/scan (Celery task).
+
+    Mirrors workspace-store.runScan(): stamps the row as just scanned and
+    returns the mock ScanResult (constant newChanges).
+    """
+    def _scan(rows):
+        for c in rows:
+            if c["slug"] == slug:
+                c["last_scan"] = "Just now"
+                c["last_scan_minutes"] = 0
+
+    MockStore(request).mutate("competitors", _scan)
+    return {"new_changes": 12}
+
+
 def set_status(request, slug, status):
     """Future: PATCH /api/competitors/:id (pause/resume)"""
 

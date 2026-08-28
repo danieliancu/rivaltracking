@@ -1,6 +1,6 @@
-{% load ui %}{# Cluster filter cards — discovery.tsx. Plain links toggle ?cluster=<id>;
+{% load ui %}{% comment %} Cluster filter cards — discovery.tsx. Plain links toggle ?cluster=<id>;
    the section re-fetches live counts on discovery:changed (staged run dialog),
-   or is OOB-swapped by dismiss / not-relevant responses. #}
+   or is OOB-swapped by dismiss / not-relevant responses. {% endcomment %}
 <section id="discovery-clusters" class="grid grid-cols-1 gap-3.5 sm:grid-cols-3"
          {% if oob_clusters %}hx-swap-oob="outerHTML"{% endif %}
          hx-get="{% url 'discovery:index' %}{{ cluster_qs }}"

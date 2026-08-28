@@ -1,5 +1,5 @@
-{% load ui %}{# Clear-filters button (only when active filters > 0); the fragment
-   response re-renders it out-of-band so the count stays live. #}
+{% load ui %}{% comment %} Clear-filters button (only when active filters > 0); the fragment
+   response re-renders it out-of-band so the count stays live. {% endcomment %}
 <span id="products-clear-filters"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
   {% if active_filters > 0 %}
   <a href="{{ table_url }}"

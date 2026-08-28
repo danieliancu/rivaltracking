@@ -1,5 +1,5 @@
-{% load ui %}{# Sonner-style toast delivered out-of-band into #toast-region.
-   Context: variant (success|info|warning|error), title, description (optional). #}
+{% load ui %}{% comment %} Sonner-style toast delivered out-of-band into #toast-region.
+   Context: variant (success|info|warning|error), title, description (optional). {% endcomment %}
 <div hx-swap-oob="afterbegin:#toast-region">
   <div x-data="{ show: false }"
        x-init="$nextTick(() => show = true); setTimeout(() => { show = false; setTimeout(() => $el.remove(), 200) }, 4000)"

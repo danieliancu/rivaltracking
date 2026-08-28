@@ -1,0 +1,26 @@
+{% load ui %}{% comment %} Products tab — embeds the products table locked to this competitor
+   (ProductsTable lockedCompetitor + urlSync=false). No competitor select,
+   no URL push; the filter form targets the competitor products fragment. {% endcomment %}
+<div class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+  <div class="grid grid-cols-[1fr_auto] items-start gap-3 px-6 pb-4 max-md:grid-cols-1">
+    <h2 class="text-sm font-bold leading-none">Product Catalogue</h2>
+    <form id="products-filter-form"
+          hx-get="{{ products_fragment_url }}" hx-target="#products-table" hx-swap="outerHTML"
+          hx-trigger="input delay:300ms from:find input, change" hx-include="this"
+          class="flex flex-wrap items-center gap-2 max-md:justify-start md:justify-end">
+      <div class="relative">
+        {% icon "search" class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" %}
+        <input name="q" value="{{ filters.query }}" placeholder="Search product, SKU, brand or category..."
+               autocomplete="off"
+               class="h-8 w-64 rounded-md border border-input bg-transparent py-1 pl-8 pr-3 text-[11px] shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+      </div>
+      {% filter_select "category" filter_options.categories selected.category "w-fit" "Filter by category" %}
+      {% filter_select "change" filter_options.change_types selected.change "w-fit" "Filter by change type" %}
+      {% filter_select "stock" filter_options.stock selected.stock "w-fit" "Filter by stock" %}
+      {% filter_select "range" filter_options.date_ranges selected.range "w-fit" "Filter by date range" %}
+      {% include "products/partials/clear_button.html" %}
+      {% filter_select "sort" filter_options.sorts selected.sort "w-fit" "Sort products" %}
+    </form>
+  </div>
+  {% include "products/partials/table.html" %}
+</div>

@@ -1,0 +1,229 @@
+{% load ui %}{% comment %} Change Events table — changes/change-events-table.tsx.
+   Root carries the Alpine selection state used by the bulk-select bar; it is
+   swapped as an outerHTML fragment when the filter form changes. {% endcomment %}
+<div id="change-events" data-table-fragment
+     x-data='{ selected: [], pageIds: [{% for i in page.ids %}"{{ i }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+               get allSelected() { return this.pageIds.length > 0 && this.pageIds.every(i => this.selected.includes(i)) },
+               toggleAll(on) { this.selected = on ? Array.from(new Set(this.selected.concat(this.pageIds))) : this.selected.filter(i => !this.pageIds.includes(i)) } }'
+     class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+
+  <div class="grid grid-cols-[1fr_auto] items-start gap-3 px-6 pb-4 max-md:grid-cols-1">
+    <h2 class="text-sm font-bold leading-none">Change Events</h2>
+    <form hx-get="{% url 'changes:index' %}" hx-target="#change-events" hx-swap="outerHTML" hx-push-url="true"
+          hx-trigger="input delay:300ms from:find input, change" hx-include="this"
+          class="flex flex-wrap items-center gap-2 max-md:justify-start md:justify-end">
+      <div class="relative">
+        {% icon "search" class="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" %}
+        <input name="q" value="{{ select_state.q }}" placeholder="Search product, competitor or category..."
+               autocomplete="off"
+               class="h-8 w-64 rounded-md border border-input bg-transparent py-1 pl-8 pr-3 text-[11px] shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+      </div>
+      {% filter_select "competitor" options.competitors select_state.competitor "w-fit" "Filter by competitor" %}
+      {% filter_select "type" options.change_types select_state.type "w-fit" "Filter by change type" %}
+      {% filter_select "category" options.categories select_state.category "w-fit" "Filter by category" %}
+      {% filter_select "impact" options.importance select_state.impact "w-fit" "Filter by importance" %}
+      {% filter_select "range" options.date_ranges select_state.range "w-fit" "Filter by date range" %}
+      {% if active_filters > 0 %}
+      <a href="{% url 'changes:index' %}"
+         class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border bg-background px-3 text-[10px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+        {% icon "filter-x" class="size-3.5" %} Clear filters
+        <span class="inline-flex size-4.5 items-center justify-center rounded-full bg-primary p-0 text-[11px] font-bold text-primary-foreground">{{ active_filters }}</span>
+      </a>
+      {% endif %}
+      {% filter_select "sort" options.sorts select_state.sort "w-fit" "Sort changes" %}
+      <span class="relative inline-flex w-fit">
+        <select aria-label="My Views"
+                onchange="event.stopPropagation(); if (this.value) { window.location.search = this.value }"
+                class="h-8 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent py-1 pl-3 pr-7 text-[10px] font-semibold text-muted-foreground shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+          <option value="">My Views</option>
+          {% for v in saved_views %}<option value="{{ v.patch }}">{{ v.label }}</option>{% endfor %}
+        </select>
+        {% icon "chevron-down" class="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground opacity-50" %}
+      </span>
+      <a href="{% url 'changes:create_alert' %}?{{ request.GET.urlencode }}"
+         class="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg px-3 text-[10px] font-bold text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+        {% icon "bell" class="size-3.5" %} Create alert from filters
+      </a>
+    </form>
+  </div>
+
+  {# Hidden field carrying the current selection for the bulk watchlist POST. #}
+  <input type="hidden" name="ids" :value="selected.join(',')">
+
+  <div x-show="selected.length" x-cloak
+       class="mx-4 mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-primary/20 bg-accent px-3.5 py-2">
+    <span class="text-[11px] font-bold text-accent-foreground"
+          x-text="selected.length + ' change' + (selected.length > 1 ? 's' : '') + ' selected'"></span>
+    <span class="ml-auto flex items-center gap-1.5">
+      <a :href="'{% url 'changes:export' %}?ids=' + selected.join(',')"
+         class="inline-flex h-7 items-center justify-center gap-2 rounded-lg border bg-card px-2.5 text-[10px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+        {% icon "download" class="size-3" %} Export
+      </a>
+      <a :href="'{% url 'ai:index' %}?prompt=' + encodeURIComponent('Explain these ' + selected.length + ' selected changes and what they mean for my pricing strategy')"
+         class="inline-flex h-7 items-center justify-center gap-2 rounded-lg bg-primary px-2.5 text-[10px] font-bold text-primary-foreground shadow-xs transition-colors hover:bg-primary/90">
+        {% icon "sparkles" class="size-3" %} Ask AI
+      </a>
+      <button type="button"
+              hx-post="{% url 'changes:watchlist' %}" hx-include="closest [data-table-fragment]" hx-swap="none"
+              class="inline-flex h-7 items-center justify-center gap-2 rounded-lg border bg-card px-2.5 text-[10px] font-bold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
+        {% icon "star" class="size-3" %} Add products to watchlist
+      </button>
+      <button type="button" aria-label="Clear selection" @click="selected = []"
+              class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+        {% icon "x" class="size-3.5" %}
+      </button>
+    </span>
+  </div>
+
+  {% if not has_events %}
+    {% empty_state icon="activity" heading="Monitoring has started" text="Change history will begin after the next successful scan." %}
+  {% elif not page.rows %}
+    {% empty_state heading="No changes found" text="Try adjusting your filters or selecting a wider date range." %}
+  {% else %}
+
+  <div class="hidden px-0 pb-0 md:block">
+    <div class="overflow-x-auto">
+      <table class="w-full caption-bottom text-sm" style="min-width: 1020px">
+        <thead>
+          <tr class="border-b">
+            <th class="h-10 w-10 px-3.5 text-left align-middle">
+              <input type="checkbox" aria-label="Select all visible changes"
+                     :checked="allSelected" @change="toggleAll($event.target.checked)"
+                     class="size-4 shrink-0 cursor-pointer rounded-[4px] border-input accent-primary">
+            </th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Change</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Product</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Competitor</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Previous</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Current</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Category</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Impact</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap">Detected</th>
+            <th class="h-10 px-3.5 text-left align-middle text-[10px] font-bold whitespace-nowrap"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in page.rows %}
+          <tr class="cursor-pointer border-b text-[11px] text-muted-foreground transition-colors hover:bg-muted/50"
+              hx-get="{% url 'changes:drawer' e.id %}" hx-target="#drawer-root" hx-swap="innerHTML">
+            <td class="px-3.5 py-2.5 align-middle" @click.stop>
+              <input type="checkbox" value="{{ e.id }}" x-model="selected"
+                     aria-label="Select change for {{ e.product.name }}"
+                     class="size-4 shrink-0 cursor-pointer rounded-[4px] border-input accent-primary">
+            </td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% change_badge e.kind e.label %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% product_identity product=e.product %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ e.competitor }}</td>
+            <td class="max-w-44 truncate px-3.5 py-2.5 align-middle">{{ e.previous }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">
+              <span class="flex max-w-52 flex-col gap-0.5">
+                <span class="truncate font-medium text-foreground">{{ e.current }}</span>
+                {% if e.secondary %}
+                <span class="text-[11px] font-medium {% if e.secondary_tone == 'success' %}text-success{% elif e.secondary_tone == 'destructive' %}text-destructive{% else %}text-muted-foreground{% endif %}">{{ e.secondary }}</span>
+                {% endif %}
+              </span>
+            </td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ e.category }}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% impact_badge e.impact %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ e.detected }}</td>
+            <td class="px-2 py-2.5 text-right align-middle" @click.stop>
+              <span class="relative inline-flex" x-data="menu()" @click.outside="close()">
+                <button type="button" @click.stop="toggle()" aria-label="Actions for {{ e.product.name }}"
+                        class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+                  {% icon "more-horizontal" class="size-4" %}
+                </button>
+                <div x-show="open" x-cloak x-transition.opacity.duration.100ms
+                     class="absolute right-0 top-8 z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-left text-popover-foreground shadow-md">
+                  <button type="button" @click="close()"
+                          hx-get="{% url 'changes:drawer' e.id %}" hx-target="#drawer-root" hx-swap="innerHTML"
+                          class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+                    {% icon "eye" class="size-3.5" %} View details
+                  </button>
+                  <a href="{% url 'products:detail' e.product.slug %}"
+                     class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+                    {% icon "history" class="size-3.5" %} View product history
+                  </a>
+                  {% if e.source_url %}
+                  <a href="{{ e.source_url }}" target="_blank" rel="noopener noreferrer"
+                     class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+                    {% icon "external-link" class="size-3.5" %} View source product
+                  </a>
+                  {% else %}
+                  <span class="pointer-events-none flex w-full select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm opacity-50">
+                    {% icon "external-link" class="size-3.5" %} View source product
+                  </span>
+                  {% endif %}
+                  <div class="-mx-1 my-1 h-px bg-border"></div>
+                  <a href="{% url 'alerts:index' %}?create=1&trigger={{ e.kind|urlencode }}&competitor={{ e.competitor|urlencode }}&category={{ e.category|urlencode }}"
+                     class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+                    {% icon "bell" class="size-3.5" %} Create alert
+                  </a>
+                </div>
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-3 px-4 pb-4 md:hidden">
+    {% for e in page.rows %}
+    <div class="cursor-pointer rounded-xl border p-3.5"
+         hx-get="{% url 'changes:drawer' e.id %}" hx-target="#drawer-root" hx-swap="innerHTML">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0 flex-1">
+          {% product_identity product=e.product sku=e.competitor %}
+        </div>
+        <span @click.stop>
+          <span class="relative inline-flex" x-data="menu()" @click.outside="close()">
+            <button type="button" @click.stop="toggle()" aria-label="Actions for {{ e.product.name }}"
+                    class="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground">
+              {% icon "more-horizontal" class="size-4" %}
+            </button>
+            <div x-show="open" x-cloak x-transition.opacity.duration.100ms
+                 class="absolute right-0 top-8 z-50 w-56 overflow-hidden rounded-md border bg-popover p-1 text-left text-popover-foreground shadow-md">
+              <button type="button" @click="close()"
+                      hx-get="{% url 'changes:drawer' e.id %}" hx-target="#drawer-root" hx-swap="innerHTML"
+                      class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+                {% icon "eye" class="size-3.5" %} View details
+              </button>
+              <a href="{% url 'products:detail' e.product.slug %}"
+                 class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+                {% icon "history" class="size-3.5" %} View product history
+              </a>
+              {% if e.source_url %}
+              <a href="{{ e.source_url }}" target="_blank" rel="noopener noreferrer"
+                 class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+                {% icon "external-link" class="size-3.5" %} View source product
+              </a>
+              {% else %}
+              <span class="pointer-events-none flex w-full select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm opacity-50">
+                {% icon "external-link" class="size-3.5" %} View source product
+              </span>
+              {% endif %}
+              <div class="-mx-1 my-1 h-px bg-border"></div>
+              <a href="{% url 'alerts:index' %}?create=1&trigger={{ e.kind|urlencode }}&competitor={{ e.competitor|urlencode }}&category={{ e.category|urlencode }}"
+                 class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
+                {% icon "bell" class="size-3.5" %} Create alert
+              </a>
+            </div>
+          </span>
+        </span>
+      </div>
+      <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+        {% change_badge e.kind e.label %}
+        {% impact_badge e.impact %}
+      </div>
+      <div class="mt-3 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+        {% change_value e.previous e.current e.secondary e.secondary_tone %}
+        <span>{{ e.detected }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% pagination page "changes" %}
+  {% endif %}
+</div>

@@ -1,0 +1,15 @@
+{% load ui %}{% comment %} ai-composer.tsx — input + round send button (disabled when empty).
+   Context: large (bool), placeholder, seed (prefill). Posts to ai:ask. {% endcomment %}
+<form x-data="{ q: '{{ seed|default:''|escapejs }}' }"
+      hx-post="{% url 'ai:ask' %}" hx-include="#ask-context"
+      hx-target="#thread" hx-swap="beforeend"
+      hx-on::after-request="this.reset()"
+      @htmx:after-request="q = ''"
+      class="relative w-full">
+  <input name="question" x-model="q" placeholder="{{ placeholder }}"
+         class="flex w-full border border-input bg-transparent px-3 py-1 shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 {% if large %}h-12 rounded-xl pr-12 text-sm{% else %}h-10 rounded-xl pr-12 text-xs{% endif %}">
+  <button type="submit" :disabled="!q.trim()" aria-label="Send"
+          class="inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-md shadow-primary/25 transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 {% if large %}absolute right-1.5 top-1.5 size-9{% else %}absolute right-1 top-1 size-8{% endif %}">
+    {% icon "arrow-up" class="size-4" %}
+  </button>
+</form>

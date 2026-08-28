@@ -1,0 +1,18 @@
+{% load ui %}{% comment %} Recent Competitor Activity — competitors/recent-activity.tsx.
+   Each row deep-links per kind via the href built in selectors.activity_feed. {% endcomment %}
+<div class="flex flex-col gap-0 overflow-hidden rounded-xl border bg-card pb-0 pt-6 text-card-foreground shadow-sm">
+  <div class="px-6 pb-4">
+    <h2 class="text-sm font-bold leading-none">Recent Competitor Activity</h2>
+  </div>
+  {% for e in activity %}
+  <a href="{{ e.href }}"
+     class="flex w-full items-center gap-2.5 border-t px-5 py-3 text-left transition-colors hover:bg-accent/40">
+    <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {{ e.tone }}">{% icon e.icon class="size-4" %}</span>
+    <span class="min-w-0 flex-1">
+      <span class="block truncate text-sm font-medium">{{ e.company }}</span>
+      <span class="mt-0.5 block truncate text-[11px] text-muted-foreground">{{ e.event }}</span>
+    </span>
+    <span class="shrink-0 text-[11px] text-muted-foreground">{{ e.time }}</span>
+  </a>
+  {% endfor %}
+</div>

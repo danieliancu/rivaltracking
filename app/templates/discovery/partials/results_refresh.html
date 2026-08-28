@@ -1,5 +1,5 @@
-{# Dismiss / not-relevant response: fresh results card (main swap of
-   #discovery-results), OOB cluster counts, and an info toast. #}
+{% comment %} Dismiss / not-relevant response: fresh results card (main swap of
+   #discovery-results), OOB cluster counts, and an info toast. {% endcomment %}
 {% include "discovery/partials/results_card.html" %}
 {% include "discovery/partials/cluster_cards.html" with oob_clusters=True %}
 {% include "partials/toast.html" with variant=toast.variant title=toast.title description=toast.description %}

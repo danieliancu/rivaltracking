@@ -1,6 +1,6 @@
-{% load ui %}{# alert-rules-table.tsx RuleActions dropdown + delete AlertDialog.
+{% load ui %}{% comment %} alert-rules-table.tsx RuleActions dropdown + delete AlertDialog.
    Context: rule. Mutations post the filter form along so the refreshed
-   fragment keeps the active filters. #}
+   fragment keeps the active filters. {% endcomment %}
 <div x-data="{ confirm: false }">
   <div class="relative" x-data="menu()" @click.outside="close()">
     <button type="button" @click.stop="toggle()" aria-label="Actions for {{ rule.name }}"

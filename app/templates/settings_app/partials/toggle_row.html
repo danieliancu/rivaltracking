@@ -1,6 +1,6 @@
-{% load ui %}{# primitives.tsx ToggleRow — auto-saving switch with transient "Saved" flash.
+{% load ui %}{% comment %} primitives.tsx ToggleRow — auto-saving switch with transient "Saved" flash.
    Context: label, description (optional), name (dotted field path), checked,
-   post_url, model (optional Alpine variable for master toggles). #}
+   post_url, model (optional Alpine variable for master toggles). {% endcomment %}
 <div class="flex items-start justify-between gap-4"
      x-data="{ saved: false, t: null }"
      @htmx:after-request.camel="saved = true; clearTimeout(t); t = setTimeout(() => saved = false, 1600)">

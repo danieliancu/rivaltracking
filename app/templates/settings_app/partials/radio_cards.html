@@ -1,5 +1,5 @@
-{# primitives.tsx RadioCards — bordered radio cards, auto-saving on change.
-   Context: options = [{value,label,hint}], name, value, post_url. #}
+{% comment %} primitives.tsx RadioCards — bordered radio cards, auto-saving on change.
+   Context: options = [{value,label,hint}], name, value, post_url. {% endcomment %}
 <div class="grid gap-2 sm:grid-cols-3" x-data="{ v: '{{ value|escapejs }}' }">
   {% for o in options %}
   <label class="cursor-pointer rounded-xl border p-2.5 text-left transition-colors"

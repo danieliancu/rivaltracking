@@ -1,6 +1,6 @@
-{% load ui %}{# Form select styled like the shadcn SelectTrigger (h-9 text-xs).
+{% load ui %}{% comment %} Form select styled like the shadcn SelectTrigger (h-9 text-xs).
    Context: name, options (strings or {value,label} dicts), selected,
-   x_model (optional Alpine binding), input_id (optional). #}
+   x_model (optional Alpine binding), input_id (optional). {% endcomment %}
 <span class="relative inline-flex w-full">
   <select name="{{ name }}"{% if input_id %} id="{{ input_id }}"{% endif %}{% if x_model %} x-model="{{ x_model }}"{% endif %}
           class="h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-transparent py-2 pl-3 pr-8 text-xs whitespace-nowrap shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">

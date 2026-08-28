@@ -1,5 +1,5 @@
-{% load ui %}{# Company discovery row — shared/company-discovery-row.tsx.
-   Context: d (candidate dict), tone_class. Monitor button swaps this row. #}
+{% load ui %}{% comment %} Company discovery row — shared/company-discovery-row.tsx.
+   Context: d (candidate dict), tone_class. Monitor button swaps this row. {% endcomment %}
 <div class="flex items-center gap-2.5 border-t px-5 py-3" data-discovery-row>
   <span class="flex size-8.5 shrink-0 items-center justify-center rounded-lg {{ tone_class }}">{% icon "store" class="size-4" %}</span>
   <span class="min-w-0 flex-1">
