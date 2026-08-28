@@ -1,8 +1,9 @@
 {# Desktop fixed rail + mobile offcanvas (Alpine $store.ui.sidebarOpen). #}
-<aside class="fixed inset-y-0 left-0 z-10 hidden h-svh w-64 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
+<aside x-data class="fixed inset-y-0 left-0 z-10 hidden h-svh w-64 flex-col border-r bg-sidebar text-sidebar-foreground md:flex">
   {% include "partials/sidebar_content.html" with badge_id="sidebar-alerts-badge" %}
 </aside>
 
+<div x-data>
 <template x-teleport="body">
   <div x-show="$store.ui.sidebarOpen" x-cloak class="md:hidden">
     <div x-show="$store.ui.sidebarOpen"
@@ -18,3 +19,4 @@
     </div>
   </div>
 </template>
+</div>

@@ -1,6 +1,6 @@
 {% load ui %}
 <header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur-md md:px-6">
-  <button type="button" @click="$store.ui.sidebarOpen = true" aria-label="Open sidebar"
+  <button type="button" x-data @click="$store.ui.sidebarOpen = true" aria-label="Open sidebar"
           class="inline-flex size-7 items-center justify-center rounded-md text-foreground hover:bg-accent hover:text-accent-foreground md:hidden">
     {% icon "panel-left" class="size-4" %}
   </button>
