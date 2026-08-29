@@ -22,32 +22,26 @@ def test_index_replays_stored_conversation(client, workspace):
     response = client.get(reverse("ai:index"), {"c": _conv_id(workspace, "ToyWorld weekly activity")})
     assert response.status_code == 200
     assert b"ToyWorld weekly activity" in response.content  # user bubble (title)
-    assert b"ToyWorld was highly active this week" in response.content  # AI heading
+    # Replays a real, data-derived answer (not a canned business fact).
+    assert b"Recent competitor activity" in response.content
 
 
 @pytest.mark.parametrize(
     "question,heading",
     [
-        ("What changed at ToyWorld this week?", "ToyWorld was highly active this week"),
-        ("What should I pay attention to today?", "ToyWorld has the highest activity today"),
-        ("Which products had the biggest reductions?", "Largest price reductions this week"),
-        ("Compare my competitors", "Competitor comparison — this week"),
-        # "price activity" + "toyworld" hits the earlier toyworld-week pattern first
-        # (faithful first-match); a neutral phrasing reaches the chart response.
-        ("Show me the price activity trend", "ToyWorld price activity — last 30 days"),
-        ("What new products have appeared recently?", "117 new products appeared this month"),
-        ("Where are competitors having stock problems?", "Stock problems concentrate at HappyToyHouse"),
-        ("Find potential gaps in competitor catalogues.", "Potential catalogue opportunities"),
-        # fallback heading ("Today's ...") — apostrophe is HTML-escaped, match the tail.
-        ("Tell me something random", "competitor activity at a glance"),
+        ("What changed this week?", "Recent competitor activity"),
+        ("Which products are cheapest vs the market?", "Your price position"),
+        ("Where are competitors out of stock?", "Recent stock changes"),
+        ("Any promotions running?", "Recent promotions"),
     ],
 )
-def test_ask_returns_canned_response(client, question, heading):
+def test_ask_returns_real_answer(client, question, heading):
     response = client.post(reverse("ai:ask"), {"question": question})
     assert response.status_code == 200
     assert heading.encode() in response.content
-    # A fresh conversation was created and pushed.
     assert "HX-Push-Url" in response
+    # No fabricated Phase 1 business facts leak into answers.
+    assert b"was highly active this week" not in response.content
 
 
 def test_ask_with_context_prefixes_scope(client):
@@ -60,13 +54,13 @@ def test_ask_with_context_prefixes_scope(client):
     assert b"Outdoor Toys" in response.content
 
 
-def test_ask_candidate_short_circuits(client):
+def test_ask_renders_answer_card(client):
     response = client.post(
         reverse("ai:ask"),
-        {"question": "Tell me about them", "competitor": "BrightSpark Toys", "candidate": "1"},
+        {"question": "What changed recently?"},
     )
     assert response.status_code == 200
-    assert b"BrightSpark Toys is not monitored yet" in response.content
+    assert b"Recent competitor activity" in response.content
 
 
 def test_rename_conversation(client, workspace):

@@ -6,6 +6,8 @@ from apps.competitors import selectors as competitor_selectors
 from apps.discovery import selectors as discovery_selectors
 from apps.scanning import selectors as scan_selectors
 
+from apps.ai import insights as ai_insights
+
 from . import selectors
 
 
@@ -26,6 +28,7 @@ def _context(request):
         "competitors": competitor_selectors.all_rows(request),
         "scan_health": scan_selectors.scan_health(request),
         "recent_events": change_selectors.recent_for_competitor(request, competitor_name),
+        "ai_summary": ai_insights.activity_summary(request.workspace),
         "suggestions": [
             {"d": d, "tone_class": discovery_selectors.tone_class(d)}
             for d in discovery_selectors.visible_candidates(request, limit=4)

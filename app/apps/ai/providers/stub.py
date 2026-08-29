@@ -9,12 +9,11 @@ class StubProvider(AIProvider):
     name = "stub"
 
     def answer_question(self, workspace, question, context=None):
-        # Reuse the deterministic structured-answer corpus so the Ask AI UI is
-        # unchanged; the tools layer still enforces workspace scope for any real
-        # data the caller injects into context.
-        from apps.ai.services import resolve_response
+        # Real, workspace-scoped answer built from retrieval tools — never the
+        # fabricated Phase 1 corpus.
+        from apps.ai.services import build_answer
 
-        return resolve_response(question, context or {})
+        return build_answer(workspace, question, context or {})
 
     def analyse_change(self, event_data) -> ChangeInsight:
         etype = event_data.get("event_type", "")

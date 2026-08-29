@@ -2,6 +2,8 @@ from django.http import Http404
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
+from apps.ai import insights as ai_insights
+
 from . import selectors, services
 from .data import ALERT_FILTER_OPTIONS
 
@@ -41,6 +43,7 @@ def index(request):
         **_activity_context(request, request.GET),
         "most_triggered_chart": selectors.most_triggered_payload(request),
         "coverage": selectors.coverage_items(request),
+        "ai_summary": ai_insights.activity_summary(request.workspace),
     }
 
     htmx = getattr(request, "htmx", None)

@@ -25,7 +25,7 @@
   {% for k in kpis %}{% kpi_card k.icon k.tone k.value k.label %}{% endfor %}
 </section>
 
-{% include "components/ai_insight_card.html" with title="AI Change Summary" cta_label="View strategic analysis" cta_href="/ask-ai/?prompt=Analyse+these+changes&competitor=ToyWorld.co.uk&period=Last+7+days" body_template="changes/partials/ai_summary_body.html" %}
+{% include "components/ai_insight_card.html" with title="AI Change Summary" cta_label="View strategic analysis" cta_href="/ask-ai/?prompt=Analyse+recent+changes" body_template="changes/partials/ai_summary_body.html" %}
 
 {% include "changes/partials/patterns.html" %}
 

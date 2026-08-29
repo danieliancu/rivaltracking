@@ -8,6 +8,8 @@ from django.views.decorators.http import require_POST
 
 from apps.alerts.data import KIND_TO_TRIGGER
 
+from apps.ai import insights as ai_insights
+
 from . import filters, selectors, services
 
 FRAGMENT_ID = "products-table"
@@ -60,6 +62,7 @@ def index(request):
         "price_movement": selectors.price_movement_card(request),
         "categories_chart": selectors.active_categories_chart(request),
         "filter_options": selectors.filter_options(request),
+        "ai_summary": ai_insights.activity_summary(request.workspace),
         "ask_ai_href": reverse("ai:index")
         + "?"
         + urlencode({"prompt": "What new products have appeared recently?"}),

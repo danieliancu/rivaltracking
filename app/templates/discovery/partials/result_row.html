@@ -40,7 +40,7 @@
       <button type="button" @click="close()"
               hx-get="{% url 'discovery:compare' d.slug %}" hx-target="#drawer-root" hx-swap="innerHTML"
               class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">
-        {% icon "git-compare-arrows" class="size-3.5" %} Compare with ToyWorld
+        {% icon "git-compare-arrows" class="size-3.5" %} Compare catalogue
       </button>
       <a href="{% url 'ai:index' %}?competitor={{ d.name|urlencode }}&candidate=1&prompt={{ "What do we know about "|add:d.name|add:"?"|urlencode }}"
          class="flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent hover:text-accent-foreground">

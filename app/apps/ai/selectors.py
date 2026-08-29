@@ -214,7 +214,12 @@ def replay_messages(request, conversation):
     """Opening a stored conversation replays its topic as a fresh answer
     (ask-ai.tsx onOpen): [user: title, ai: resolveResponse(title)] — no
     context is applied to the replay."""
+    from apps.ai.providers import get_provider
+
+    response = get_provider().answer_question(
+        getattr(request, "workspace", None), conversation["title"], {}
+    )
     return [
         {"role": "user", "text": conversation["title"]},
-        build_ai_message(services.resolve_response(conversation["title"], {})),
+        build_ai_message(response),
     ]

@@ -3,7 +3,7 @@
   {% for k in kpis %}{% kpi_card k.icon k.tone k.value k.label k.href %}{% endfor %}
 </section>
 
-{% include "components/ai_insight_card.html" with title="AI Summary" cta_label="View analysis" cta_href="/ask-ai?competitor=ToyWorld.co.uk&category=Outdoor Toys&prompt=What changed at ToyWorld this week%3F" body_template="dashboard/partials/ai_summary_body.html" %}
+{% include "components/ai_insight_card.html" with title="AI Summary" cta_label="View analysis" cta_href="/ask-ai/?prompt=What+changed+this+week%3F" body_template="dashboard/partials/ai_summary_body.html" %}
 
 <section class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-[2fr_1fr_1fr]">
   <div class="flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm lg:col-span-2 2xl:col-span-1">

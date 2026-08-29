@@ -10,6 +10,8 @@ from django.views.decorators.http import require_POST
 from apps.alerts.data import KIND_TO_TRIGGER
 from apps.core.selectors import to_int
 
+from apps.ai import insights as ai_insights
+
 from . import filters, selectors, services
 
 
@@ -26,6 +28,7 @@ def index(request):
         "saved_views": selectors.saved_view_options(request),
         "page": selectors.events_page(request, f, sort, page),
         "has_events": bool(selectors.all_events(request)),
+        "ai_summary": ai_insights.activity_summary(request.workspace),
         "activity_tab": tab,
         "activity_tabs": selectors.ACTIVITY_TABS,
         "charts": {

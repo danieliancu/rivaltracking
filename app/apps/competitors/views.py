@@ -12,6 +12,8 @@ from apps.changes import selectors as change_selectors
 from apps.core.entities import slugify
 from apps.products import selectors as product_selectors
 
+from apps.ai import insights as ai_insights
+
 from . import selectors, services
 from .data import SCAN_STAGES
 
@@ -82,6 +84,7 @@ def index(request):
         "kpis": selectors.kpi_cards(request),
         "activity": selectors.activity_feed(request),
         "health": selectors.monitoring_health(request),
+        "ai_summary": ai_insights.activity_summary(request.workspace),
         "suggestions": selectors.discovery_suggestions(request),
         "ask_ai_href": reverse("ai:index")
         + "?"

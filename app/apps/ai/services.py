@@ -1,72 +1,10 @@
-"""Ask AI resolution + conversation mutations against the mock store.
+"""Ask AI answering (real workspace data) + conversation persistence.
 
-Ports resolveResponse from prototype-react/src/lib/ask-ai-data.ts and the
-conversation helpers from workspace-store.tsx (addConversation /
-renameConversation / deleteConversation).
+Ask AI never fabricates business facts: answers are built from the workspace's
+own retrieval tools (see build_answer) or an honest no-data response. The
+Phase 1 canned-response corpus has been removed from production.
 """
-import re
-from copy import deepcopy
-from functools import lru_cache
-
-from .data import CANDIDATE_RESPONSE_TEMPLATE, FALLBACK_RESPONSE, RESPONSES
 from .models import Conversation, Message
-
-
-@lru_cache(maxsize=1)
-def _compiled_responses():
-    """RESPONSES with their pattern strings compiled (re.IGNORECASE), matched
-    in declaration order — the first hit wins, exactly like resolveResponse."""
-    return [(re.compile(r["pattern"], re.IGNORECASE), r["response"]) for r in RESPONSES]
-
-
-def _candidate_response(name):
-    """Format CANDIDATE_RESPONSE_TEMPLATE for an unmonitored discovery
-    candidate (ask-ai-data.ts candidateResponse)."""
-    response = deepcopy(CANDIDATE_RESPONSE_TEMPLATE)
-    for key in ("id", "heading", "summary", "next_step"):
-        if key in response and "{name}" in response[key]:
-            response[key] = response[key].format(name=name)
-    return response
-
-
-def resolve_response(question, context=None):
-    """Future: POST /api/ai/query
-
-    Faithful port of resolveResponse:
-    - candidate short-circuit (context.candidate AND context.competitor);
-    - else first RESPONSES regex match (case-insensitive) over the question;
-    - else FALLBACK_RESPONSE;
-    - then, if any scope parts are set, prefix the summary with
-      "Scoped to {parts}. " (parts joined with " · ").
-
-    Returns a deep copy so the prefix never mutates the seed data.
-    """
-    context = context or {}
-
-    if context.get("candidate") and context.get("competitor"):
-        return _candidate_response(context["competitor"])
-
-    base = None
-    for pattern, response in _compiled_responses():
-        if pattern.search(question):
-            base = response
-            break
-    if base is None:
-        base = FALLBACK_RESPONSE
-    result = deepcopy(base)
-
-    scope_parts = [
-        context.get("competitor"),
-        context.get("product"),
-        context.get("category"),
-        context.get("period"),
-        "All competitors" if context.get("scope") == "all-competitors" else None,
-    ]
-    scope_parts = [p for p in scope_parts if p]
-    if scope_parts:
-        prefix = "Scoped to " + " · ".join(scope_parts) + ". "
-        result["summary"] = (prefix + (result.get("summary") or "")).strip()
-    return result
 
 
 # ---------------------------------------------------------------------------
@@ -137,3 +75,136 @@ def delete_conversation(request, conversation_id):
     name = conv.title
     conv.delete()
     return name
+
+
+# ---------------------------------------------------------------------------
+# Real, workspace-scoped Ask AI answering (no fabricated business facts)
+
+_GENERIC_FOLLOW_UPS = [
+    "What changed this week?",
+    "Which of my products are cheapest vs the market?",
+    "Any competitor stock-outs right now?",
+]
+
+
+def _scope_prefix(context):
+    parts = [
+        context.get("competitor"),
+        context.get("product"),
+        context.get("category"),
+        context.get("period"),
+        "all competitors" if context.get("scope") == "all-competitors" else None,
+    ]
+    parts = [p for p in parts if p]
+    return ("Scoped to " + " · ".join(parts) + ". ") if parts else ""
+
+
+def _no_data_answer(data_through):
+    return {
+        "id": "no-data",
+        "heading": "Not enough data collected yet",
+        "summary": (
+            "I don't have enough data for this workspace yet. Connect your catalogue, "
+            "add a competitor and run a scan — then ask me again."
+        ),
+        "follow_ups": [],
+        "data_through": data_through,
+        "evidence": [{"label": "Add a competitor", "to": "/competitors/"}],
+    }
+
+
+def _change_bullet(c):
+    event = c["event"].replace("_", " ")
+    product = f" · {c['product']}" if c["product"] else ""
+    return f"**{c['competitor']}** — {event}{product}"
+
+
+def build_answer(workspace, question, context):
+    """Deterministic, real-data Ask AI answer from workspace retrieval tools.
+
+    Never fabricates business facts: it reports what the workspace's own DB
+    holds, or an honest no-data response.
+    """
+    from django.utils import timezone
+
+    from apps.catalogue import selectors as catalogue_selectors
+    from apps.catalogue.models import OwnProduct
+    from apps.changes.models import ChangeEvent
+    from apps.competitors.models import Competitor
+
+    from . import tools
+
+    q = (question or "").lower()
+    data_through = timezone.localtime(timezone.now()).strftime("%d %b, %H:%M")
+    prefix = _scope_prefix(context or {})
+
+    if not Competitor.objects.for_workspace(workspace).exists() and not ChangeEvent.objects.for_workspace(workspace).exists():
+        return _no_data_answer(data_through)
+
+    base = {"id": "answer", "data_through": data_through, "follow_ups": _GENERIC_FOLLOW_UPS, "evidence": []}
+
+    # Price / market position
+    if any(w in q for w in ("price", "pricing", "cheap", "expensive", "position", "market", "vs")):
+        positions = [
+            p for p in catalogue_selectors.workspace_price_positions(workspace)
+            if p["our_price"] is not None and p["competitors"]
+        ]
+        if positions:
+            cheaper = sum(1 for p in positions if p["position"] == "cheapest")
+            pricier = sum(1 for p in positions if p["position"] == "most_expensive")
+            return {**base, "heading": "Your price position",
+                    "summary": f"{prefix}{len(positions)} of your products are matched to competitors: "
+                               f"{cheaper} are the cheapest and {pricier} are the most expensive.",
+                    "metrics": [
+                        {"value": str(len(positions)), "label": "Matched products"},
+                        {"value": str(cheaper), "label": "Cheapest", "tone": "text-success"},
+                        {"value": str(pricier), "label": "Most expensive", "tone": "text-destructive"},
+                    ],
+                    "bullets": [
+                        f"**{p['own_product']}** — ours {p['our_price']} vs lowest {p['lowest']}"
+                        for p in positions[:5]
+                    ],
+                    "next_step": "Connect more of your catalogue to widen the comparison." if len(positions) < 5 else "Review the products where you are the most expensive.",
+                    "evidence": [{"label": "View products", "to": "/products/"}]}
+        changes = [c for c in tools.get_recent_changes(workspace, days=30, limit=50)
+                   if c["event"] in ("price_decrease", "price_increase")]
+        return {**base, "heading": "Recent price changes",
+                "summary": f"{prefix}{len(changes)} price changes detected in the last 30 days.",
+                "bullets": [_change_bullet(c) for c in changes[:6]] or ["No price changes recorded yet."],
+                "evidence": [{"label": "View changes", "to": "/changes/?type=price-decrease"}]}
+
+    # Stock
+    if any(w in q for w in ("stock", "availability", "out of stock", "sold out")):
+        changes = [c for c in tools.get_recent_changes(workspace, days=30, limit=50)
+                   if c["event"] in ("stock_out", "stock_in")]
+        return {**base, "heading": "Recent stock changes",
+                "summary": f"{prefix}{len(changes)} stock changes in the last 30 days.",
+                "bullets": [_change_bullet(c) for c in changes[:6]] or ["No stock changes recorded yet."],
+                "evidence": [{"label": "View changes", "to": "/changes/?type=out-of-stock"}]}
+
+    # Promotions
+    if any(w in q for w in ("promo", "promotion", "discount", "offer")):
+        changes = [c for c in tools.get_recent_changes(workspace, days=30, limit=50)
+                   if c["event"] in ("promotion_started", "promotion_ended")]
+        return {**base, "heading": "Recent promotions",
+                "summary": f"{prefix}{len(changes)} promotion changes in the last 30 days.",
+                "bullets": [_change_bullet(c) for c in changes[:6]] or ["No promotions detected yet."],
+                "evidence": [{"label": "View changes", "to": "/changes/?type=promotion-started"}]}
+
+    # Default: recent activity summary
+    recent = tools.get_recent_changes(workspace, days=7, limit=40)
+    T = ChangeEvent.Type
+    ev = ChangeEvent.objects.for_workspace(workspace).filter(
+        detected_at__gte=timezone.now() - timezone.timedelta(days=7)
+    )
+    return {**base, "heading": "Recent competitor activity",
+            "summary": f"{prefix}{len(recent)} changes detected across your competitors in the last 7 days.",
+            "metrics": [
+                {"value": str(ev.filter(event_type=T.PRICE_DECREASE).count()), "label": "Price drops", "tone": "text-success"},
+                {"value": str(ev.filter(event_type=T.PRICE_INCREASE).count()), "label": "Price rises", "tone": "text-destructive"},
+                {"value": str(ev.filter(event_type__in=[T.STOCK_IN, T.STOCK_OUT]).count()), "label": "Stock moves"},
+                {"value": str(ev.filter(event_type=T.PRODUCT_NEW).count()), "label": "New products"},
+            ],
+            "bullets": [_change_bullet(c) for c in recent[:6]] or ["No changes in the last 7 days."],
+            "next_step": "Ask about a specific competitor, product or category to go deeper.",
+            "evidence": [{"label": "View all changes", "to": "/changes/"}]}
