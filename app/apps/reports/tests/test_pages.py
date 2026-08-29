@@ -1,7 +1,13 @@
 import pytest
 from django.urls import reverse
 
+from apps.reports.models import Report
+
 pytestmark = pytest.mark.django_db
+
+
+def _report_id(workspace, name="Weekly Intelligence — Week 34"):
+    return str(Report.objects.get(workspace=workspace, title=name).pk)
 
 
 def test_index_renders_full_shell(client):
@@ -13,8 +19,8 @@ def test_index_renders_full_shell(client):
     assert "Scheduled Reports" in body
 
 
-def test_detail_ready_report(client):
-    resp = client.get(reverse("reports:detail", args=["weekly-week-34"]))
+def test_detail_ready_report(client, workspace):
+    resp = client.get(reverse("reports:detail", args=[_report_id(workspace)]))
     assert resp.status_code == 200
     body = resp.content.decode()
     assert "Weekly Intelligence — Week 34" in body
@@ -45,8 +51,8 @@ def test_schedule_dialog_fragment(client):
     assert "Schedule report" in resp.content.decode()
 
 
-def test_export_csv(client):
-    resp = client.get(reverse("reports:export_csv", args=["weekly-week-34"]))
+def test_export_csv(client, workspace):
+    resp = client.get(reverse("reports:export_csv", args=[_report_id(workspace)]))
     assert resp.status_code == 200
     assert resp["Content-Type"].startswith("text/csv")
     assert "Weekly Intelligence — Week 34" in resp.content.decode()
@@ -63,8 +69,8 @@ def test_create_report_post(client):
     assert "Preparing report" in body
 
 
-def test_delete_report_post(client):
-    resp = client.post(reverse("reports:delete", args=["weekly-week-34"]))
+def test_delete_report_post(client, workspace):
+    resp = client.post(reverse("reports:delete", args=[_report_id(workspace)]))
     assert resp.status_code == 200
     body = resp.content.decode()
     # Toast confirms the deletion (its description echoes the report name).

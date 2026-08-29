@@ -2,9 +2,11 @@
 from urllib.parse import urlencode
 
 from django.urls import reverse
+from django.utils import timezone
 
-from apps.core.store import WorkspaceStore
+from apps.core.format import relative_time
 
+from .models import Report, ReportSchedule
 from .data import (
     GENERATION_STAGES,
     REPORT_FORM_OPTIONS,
@@ -51,20 +53,66 @@ def report_type(type_id):
     return next((t for t in REPORT_TYPES if t["id"] == type_id), None)
 
 
+def _workspace(request):
+    return getattr(request, "workspace", None)
+
+
+def _pk(value):
+    return int(value) if str(value).isdigit() else None
+
+
+def report_dict(obj, now=None):
+    now = now or timezone.now()
+    cfg = obj.config or {}
+    minutes = max(0, int((now - obj.created_at).total_seconds() // 60))
+    return {
+        "id": str(obj.pk),
+        "name": obj.title,
+        "type_id": obj.report_type,
+        "type": cfg.get("type_title", obj.report_type),
+        "competitors": obj.competitors,
+        "period": obj.period,
+        "created": relative_time(minutes),
+        "status": obj.status,
+        "data_through": cfg.get("data_through", ""),
+        "category": cfg.get("category"),
+        "change_type": cfg.get("change_type"),
+        "ai_analysis": cfg.get("ai_analysis", True),
+        "summary": obj.summary,
+    }
+
+
+def schedule_dict(obj):
+    return {
+        "id": str(obj.pk),
+        "name": obj.name,
+        "type_id": obj.report_type,
+        "competitors": obj.competitors,
+        "frequency": obj.frequency,
+        "time": obj.run_time,
+        "active": obj.enabled,
+    }
+
+
 def all_reports(request):
-    return WorkspaceStore(request).get("reports")
+    now = timezone.now()
+    return [report_dict(r, now) for r in Report.objects.for_workspace(_workspace(request))]
 
 
 def by_id(request, report_id):
-    return next((r for r in all_reports(request) if r["id"] == report_id), None)
+    obj = Report.objects.for_workspace(_workspace(request)).filter(pk=_pk(report_id)).first()
+    return report_dict(obj) if obj else None
 
 
 def all_schedules(request):
-    return WorkspaceStore(request).get("report_schedules")
+    return [schedule_dict(s) for s in ReportSchedule.objects.for_workspace(_workspace(request))]
 
 
 def schedule_by_id(request, schedule_id):
-    return next((s for s in all_schedules(request) if s["id"] == schedule_id), None)
+    obj = ReportSchedule.objects.for_workspace(_workspace(request)).filter(
+        pk=_pk(schedule_id)
+    ).first()
+    return schedule_dict(obj) if obj else None
 
 
 def reports_with_types(request):

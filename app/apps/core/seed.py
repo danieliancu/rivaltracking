@@ -384,6 +384,42 @@ def _seed_alerts(workspace, now):
         )
 
 
+def _seed_reports(workspace, now):
+    """Seed generated reports + schedules."""
+    from apps.reports.data import GENERATED_REPORTS, REPORT_SCHEDULES
+    from apps.reports.models import Report, ReportSchedule
+
+    Report.objects.filter(workspace=workspace).delete()
+    ReportSchedule.objects.filter(workspace=workspace).delete()
+
+    status_map = {"generating": "generating", "ready": "ready", "attention": "ready"}
+    for r in GENERATED_REPORTS:
+        Report.objects.create(
+            workspace=workspace,
+            title=r["name"],
+            report_type=r["type_id"],
+            competitors=r.get("competitors", "All"),
+            period=r.get("period", ""),
+            status=status_map.get(r.get("status"), "ready"),
+            generated_at=now,
+            config={
+                "type_title": r.get("type", r["type_id"]),
+                "data_through": r.get("data_through", ""),
+                "ai_analysis": True,
+            },
+        )
+    for s in REPORT_SCHEDULES:
+        ReportSchedule.objects.create(
+            workspace=workspace,
+            name=s["name"],
+            report_type=s["type_id"],
+            competitors=s.get("competitors", "All competitors"),
+            frequency=s.get("frequency", "Every day"),
+            run_time=s.get("time", "08:00"),
+            enabled=s.get("active", True),
+        )
+
+
 def _seed_conversations(workspace):
     """Seed a few Ask AI conversations (owner-attributed)."""
     from apps.ai.data import CONVERSATION_HISTORY
@@ -412,5 +448,6 @@ def seed_workspace(workspace, *, now=None):
     _seed_team(workspace)
     _seed_discovery(workspace)
     _seed_alerts(workspace, now)
+    _seed_reports(workspace, now)
     _seed_conversations(workspace)
     return workspace

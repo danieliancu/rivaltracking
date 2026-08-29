@@ -1,11 +1,32 @@
-"""Report mutations against the mock store.
+"""Report generation + schedule mutations over the Report/ReportSchedule models.
 
-Each function notes the future backend endpoint it stands in for
-(services/reports.ts in the prototype).
+Numeric sections are deterministic (computed from ChangeEvent over the period);
+only the narrative summary uses AI.
 """
 import time
+from datetime import timedelta
 
-from apps.core.store import WorkspaceStore
+from django.utils import timezone
+
+from apps.changes.models import ChangeEvent
+from apps.competitors.models import Competitor
+
+from .models import Report, ReportSchedule
+
+PERIOD_DAYS = {"Today": 1, "Last 7 days": 7, "Last 30 days": 30, "Last 24 hours": 1}
+
+
+def _workspace(request):
+    return getattr(request, "workspace", None)
+
+
+def _user(request):
+    user = getattr(request, "user", None)
+    return user if (user is not None and user.is_authenticated) else None
+
+
+def _pk(value):
+    return int(value) if str(value).isdigit() else None
 
 
 def _base36(value):
@@ -17,80 +38,120 @@ def _base36(value):
     return out or "0"
 
 
+def compute_metrics(workspace, period):
+    """Deterministic report metrics from ChangeEvent over the period window."""
+    now = timezone.now()
+    since = now - timedelta(days=PERIOD_DAYS.get(period, 7))
+    events = ChangeEvent.objects.for_workspace(workspace).filter(detected_at__gte=since)
+    T = ChangeEvent.Type
+    return {
+        "total_changes": events.count(),
+        "new_products": events.filter(event_type=T.PRODUCT_NEW).count(),
+        "price_decreases": events.filter(event_type=T.PRICE_DECREASE).count(),
+        "price_increases": events.filter(event_type=T.PRICE_INCREASE).count(),
+        "stock_outs": events.filter(event_type=T.STOCK_OUT).count(),
+        "promotions": events.filter(event_type=T.PROMOTION_STARTED).count(),
+    }
+
+
+def generate(report):
+    """Populate a report from real data (+ AI narrative); mark it ready."""
+    from apps.ai.providers import get_provider
+
+    ws = report.workspace
+    now = timezone.now()
+    metrics = compute_metrics(ws, report.period)
+    report.config = {
+        **(report.config or {}),
+        "metrics": metrics,
+        "data_through": timezone.localtime(now).strftime("%d %b, %H:%M"),
+    }
+    if report.config.get("ai_analysis", True):
+        report.summary = get_provider().generate_report_summary(
+            ws,
+            {"total_changes": metrics["total_changes"],
+             "competitors": Competitor.objects.for_workspace(ws).count()},
+        )
+    report.status = Report.Status.READY
+    report.generated_at = now
+    report.save()
+    return report
+
+
 def create_report(request, *, type_id, type_title, competitors, period,
                   category=None, change_type=None, ai_analysis=True):
-    """Future: POST /api/reports → GeneratedReport (Report Engine + analytics).
+    """Future: POST /api/reports → generate a Report from real data."""
+    report = Report.objects.create(
+        workspace=_workspace(request),
+        generated_by=_user(request),
+        title=f"{type_title} — {period}",
+        report_type=type_id,
+        competitors=competitors,
+        period=period,
+        status=Report.Status.GENERATING,
+        config={
+            "type_title": type_title,
+            "category": category,
+            "change_type": change_type,
+            "ai_analysis": ai_analysis,
+        },
+    )
+    generate(report)
+    from .selectors import report_dict
 
-    Port of workspace-store createReport + services/reports.ts generateReport:
-    id "{typeId}-{Date.now base36}", name "{type} — {period}", created
-    "Just now", status "ready", data through "26 Aug, 14:42"; prepended.
-    """
-    store = WorkspaceStore(request)
-    report_id = f"{type_id}-{_base36(int(time.time() * 1000))}"
-    existing = {r["id"] for r in store.get("reports")}
-    while report_id in existing:  # same-millisecond regenerate clicks
-        report_id += "0"
-    report = {
-        "id": report_id,
-        "name": f"{type_title} — {period}",
-        "type_id": type_id,
-        "type": type_title,
-        "competitors": competitors,
-        "period": period,
-        "created": "Just now",
-        "status": "ready",
-        "data_through": "26 Aug, 14:42",
-        "category": category,
-        "change_type": change_type,
-        "ai_analysis": ai_analysis,
-    }
-    store.mutate("reports", lambda rows: rows.insert(0, report))
-    return report
+    return report_dict(report)
 
 
 def delete_report(request, report_id):
     """Future: DELETE /api/reports/:id"""
-    store = WorkspaceStore(request)
-    store.replace("reports", [r for r in store.get("reports") if r["id"] != report_id])
+    Report.objects.for_workspace(_workspace(request)).filter(pk=_pk(report_id)).delete()
 
 
 def new_schedule_id(type_id):
-    """schedule-report-dialog.tsx: `s-${typeId}-${Date.now().toString(36)}`."""
+    """Placeholder id for a not-yet-saved schedule (real id is the pk once saved)."""
     return f"s-{type_id}-{_base36(int(time.time() * 1000))}"
 
 
 def save_schedule(request, schedule):
-    """Future: POST /api/report-schedules and PATCH /api/report-schedules/:id"""
+    """Future: POST/PATCH /api/report-schedules — create or update by pk."""
+    ws = _workspace(request)
+    sid = _pk(schedule.get("id"))
+    obj = ReportSchedule.objects.for_workspace(ws).filter(pk=sid).first() if sid else None
+    fields = {
+        "name": schedule["name"],
+        "report_type": schedule["type_id"],
+        "competitors": schedule["competitors"],
+        "frequency": schedule["frequency"],
+        "run_time": schedule["time"],
+        "enabled": schedule.get("active", True),
+    }
+    if obj is None:
+        obj = ReportSchedule.objects.create(workspace=ws, **fields)
+    else:
+        for key, value in fields.items():
+            setattr(obj, key, value)
+        obj.save()
+    from .selectors import schedule_dict
 
-    def _save(rows):
-        for i, s in enumerate(rows):
-            if s["id"] == schedule["id"]:
-                rows[i] = schedule
-                return
-        rows.append(schedule)
-
-    WorkspaceStore(request).mutate("report_schedules", _save)
-    return schedule
+    return schedule_dict(obj)
 
 
 def toggle_schedule(request, schedule_id):
     """Future: PATCH /api/report-schedules/:id (pause/resume)"""
-    toggled = {}
+    obj = ReportSchedule.objects.for_workspace(_workspace(request)).filter(
+        pk=_pk(schedule_id)
+    ).first()
+    if obj is None:
+        return None
+    obj.enabled = not obj.enabled
+    obj.save(update_fields=["enabled"])
+    from .selectors import schedule_dict
 
-    def _toggle(rows):
-        for s in rows:
-            if s["id"] == schedule_id:
-                s["active"] = not s["active"]
-                toggled.update(s)
-
-    WorkspaceStore(request).mutate("report_schedules", _toggle)
-    return toggled or None
+    return schedule_dict(obj)
 
 
 def delete_schedule(request, schedule_id):
     """Future: DELETE /api/report-schedules/:id"""
-    store = WorkspaceStore(request)
-    store.replace(
-        "report_schedules",
-        [s for s in store.get("report_schedules") if s["id"] != schedule_id],
-    )
+    ReportSchedule.objects.for_workspace(_workspace(request)).filter(
+        pk=_pk(schedule_id)
+    ).delete()
