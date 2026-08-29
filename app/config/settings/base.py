@@ -110,11 +110,11 @@ DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL", default="RivalTracking <no-reply@rivaltracking.com>"
 )
 
-# One-click demo sign-in on the login page. The demo user is created by
-# `manage.py seed_demo`; disable in real production deployments.
+# One-click demo sign-in on the login page: a password-less login of the seeded
+# demo user, gated by DEMO_LOGIN_ENABLED. No demo password is stored anywhere.
+# The demo user is created by `manage.py seed_demo`; disable in real production.
 DEMO_LOGIN_ENABLED = env("DEMO_LOGIN_ENABLED", default="1") not in ("0", "false", "False")
 DEMO_EMAIL = env("DEMO_EMAIL", default="demo@rivaltracking.com")
-DEMO_PASSWORD = env("DEMO_PASSWORD", default="demo-rivaltracking")
 
 LANGUAGE_CODE = "en-gb"
 TIME_ZONE = "Europe/London"

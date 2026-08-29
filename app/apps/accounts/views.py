@@ -12,6 +12,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_http_methods, require_POST
 
 from .forms import LoginForm, SignupForm
+from .models import User
 from .services import register_account
 
 
@@ -70,12 +71,14 @@ def signup_view(request):
 @login_not_required
 @require_POST
 def demo_login_view(request):
-    """One-click demo sign-in using the seeded demo credentials."""
+    """One-click, password-less sign-in of the seeded demo user.
+
+    Deliberate public-demo bypass, gated by DEMO_LOGIN_ENABLED — there is no
+    demo password anywhere in the codebase.
+    """
     if not settings.DEMO_LOGIN_ENABLED:
         return redirect("accounts:login")
-    user = authenticate(
-        request, email=settings.DEMO_EMAIL, password=settings.DEMO_PASSWORD
-    )
+    user = User.objects.filter(email__iexact=settings.DEMO_EMAIL).first()
     if user is None:
         return render(
             request,
@@ -87,7 +90,7 @@ def demo_login_view(request):
                 "demo_error": "Demo account is not available. Run `manage.py seed_demo`.",
             },
         )
-    login(request, user)
+    login(request, user, backend="apps.accounts.backends.EmailBackend")
     return redirect("dashboard:overview")
 
 

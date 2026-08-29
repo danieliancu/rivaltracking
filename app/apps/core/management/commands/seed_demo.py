@@ -25,20 +25,21 @@ class Command(BaseCommand):
         parser.add_argument(
             "--reset",
             action="store_true",
-            help="Reset the demo user's password to the configured demo password.",
+            help="Re-seed the demo workspace (data is rebuilt every run regardless).",
         )
 
     @transaction.atomic
     def handle(self, *args, **options):
         email = settings.DEMO_EMAIL
-        password = settings.DEMO_PASSWORD
 
         user, created = User.objects.get_or_create(
             email=email,
             defaults={"first_name": "Demo", "last_name": "User", "is_staff": False},
         )
-        if created or options["reset"]:
-            user.set_password(password)
+        if created:
+            # No demo password exists; the demo user signs in only via the
+            # password-less "Enter the demo" button (gated by DEMO_LOGIN_ENABLED).
+            user.set_unusable_password()
             user.save()
 
         workspace = user.workspaces.filter(slug=DEMO_WORKSPACE_SLUG).first()
@@ -62,6 +63,6 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.SUCCESS(
                 f"Seeded '{workspace.name}' for {email}. "
-                f"Sign in with {email} / {password}."
+                "Use the 'Enter the demo' button on the login page."
             )
         )

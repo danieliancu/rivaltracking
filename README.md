@@ -38,11 +38,9 @@ python manage.py seed_demo
 python manage.py runserver
 ```
 
-Open http://127.0.0.1:8000/. The app is **login-gated**. Either click
-**Enter the demo** on the sign-in page, or use the seeded credentials:
-
-- **Email:** `demo@rivaltracking.com`
-- **Password:** `demo-rivaltracking`
+Open http://127.0.0.1:8000/. The app is **login-gated**. Click **Enter the
+demo** on the sign-in page — a password-less, one-click sign-in of the seeded
+demo user (`demo@rivaltracking.com`), gated by `DEMO_LOGIN_ENABLED`.
 
 You can also **create a new account** (Sign up), which provisions a fresh empty
 workspace you own. No environment variables are required locally (see
