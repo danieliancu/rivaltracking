@@ -98,10 +98,34 @@ def competitor_names(request):
     return names if names else list(data.DATA_SETTINGS["competitors"])
 
 
-def billing_usage():
+def billing_usage(request):
+    """Real usage vs plan limits (deterministic; billing enforcement is later)."""
+    from apps.core import quotas
+
+    u = quotas.usage(request.workspace)
+    rows = [
+        ("Competitors", u["competitors"], quotas.DEFAULT_LIMITS["competitors"]),
+        ("Active listings", u["active_listings"], quotas.DEFAULT_LIMITS["active_listings"]),
+        ("Scans (24h)", u["scans_last_24h"], quotas.DEFAULT_LIMITS["scans_per_day"]),
+        ("AI analyses (24h)", u["ai_analyses_last_24h"], quotas.DEFAULT_LIMITS["ai_analyses_per_day"]),
+    ]
     return [
-        {**u, "percent": min(100, u["used"] / u["limit"] * 100)}
-        for u in data.BILLING["usage"]
+        {"label": label, "used": used, "limit": limit, "percent": min(100, (used / limit * 100) if limit else 0)}
+        for label, used, limit in rows
+    ]
+
+
+def data_stats(request):
+    """Real data-section stats for the workspace."""
+    from apps.core import quotas
+
+    u = quotas.usage(request.workspace)
+    since = request.workspace.created_at
+    return [
+        {"label": "Competitors", "value": str(u["competitors"])},
+        {"label": "Products", "value": f"{u['products']:,}"},
+        {"label": "Active listings", "value": f"{u['active_listings']:,}"},
+        {"label": "Monitoring since", "value": since.strftime("%d %B %Y")},
     ]
 
 
@@ -177,10 +201,10 @@ def section_context(request, section):
         )
     elif section == "data":
         ctx.update(
-            stats=data.DATA_SETTINGS["stats"],
+            stats=data_stats(request),
             retention=state["retention"],
             retention_options=data.DATA_SETTINGS["retention_options"],
         )
     elif section == "billing":
-        ctx.update(billing=data.BILLING, usage=billing_usage())
+        ctx.update(billing=data.BILLING, usage=billing_usage(request))
     return ctx
