@@ -75,15 +75,25 @@ def import_from_website(source, *, fetcher=None, throttle=True):
         adapter = select_adapter(home)
         urls = adapter.discover(source, fetcher)[: settings.SCAN_MAX_PAGES]
         for url in urls:
-            result, normalized = scrape_url(url, fetcher, adapter)
-            if not result.ok:
+            try:
+                result, normalized = scrape_url(url, fetcher, adapter)
+                if not result.ok:
+                    errors += 1
+                    error_messages.append(f"{url}: HTTP {result.status_code}")
+                    continue
+                if normalized is None:
+                    continue
+                upsert_own_product(workspace, normalized, url, source=source)
+                found += 1
+            except Exception as exc:  # one bad page never fails the whole import
                 errors += 1
-                error_messages.append(f"{url}: HTTP {result.status_code}")
-                continue
-            if normalized is None:
-                continue
-            upsert_own_product(workspace, normalized, url, source=source)
-            found += 1
+                error_messages.append(f"{url}: {str(exc)[:120]}")
+                logger.warning("catalogue.import.page_failed url=%s error=%s", url, exc)
+            # Publish running progress so the connect dialog's poll can show it.
+            if (found + errors) % 3 == 0:
+                OwnCatalogueSource.objects.filter(id=source.id).update(
+                    products_found=found, errors_count=errors
+                )
         if found and not errors:
             source.status = OwnCatalogueSource.Status.CONNECTED
         elif found:

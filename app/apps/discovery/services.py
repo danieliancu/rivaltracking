@@ -1,7 +1,5 @@
 """Discovery mutations over the DiscoveryCandidate model. Starting monitoring
 creates a real Competitor for the workspace."""
-from django.utils import timezone
-
 from apps.competitors.models import Competitor
 from apps.core.entities import competitor_tone
 
@@ -21,24 +19,26 @@ def monitor_candidate(request, slug):
     candidate.status = DiscoveryCandidate.Status.MONITORING
     candidate.save(update_fields=["status", "updated_at"])
 
-    now = timezone.now()
-    products = candidate.catalogue_profile.get("products")
-    Competitor.objects.get_or_create(
+    competitor, created = Competitor.objects.get_or_create(
         workspace=candidate.workspace,
         slug=candidate.slug,
         defaults={
             "name": candidate.name,
             "domain": candidate.domain,
             "website_url": candidate.website_url or f"https://{candidate.domain}",
-            "market": "UK Toys",
             "status": Competitor.Status.INITIALISING,
             "monitoring_enabled": True,
             "tone": competitor_tone(candidate.name),
-            "products_count": products if isinstance(products, int) else None,
-            "last_scan_at": now,
-            "next_scan_at": now + timezone.timedelta(hours=24),
         },
     )
+    if created:
+        # Queue the real first scan; products_count/market fill in from results,
+        # not from the (estimated) discovery profile.
+        from apps.scanning.models import ScanJob
+        from apps.scanning.services import enqueue_scan
+
+        enqueue_scan(competitor, trigger=ScanJob.Trigger.INITIAL)
+
     from .selectors import candidate_dict
 
     return candidate_dict(candidate)

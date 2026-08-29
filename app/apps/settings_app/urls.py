@@ -9,6 +9,8 @@ urlpatterns = [
     # Fragment + mutation routes must precede the <slug:section> catch-all.
     path("save/<slug:section>/", views.save, name="save"),
     path("connect-catalogue/", views.connect_catalogue, name="connect_catalogue"),
+    path("catalogue/website-panel/", views.catalogue_website_panel, name="catalogue_website_panel"),
+    path("catalogue/import-status/", views.import_status, name="import_status"),
     path("catalogue/connect/", views.catalogue_connect, name="catalogue_connect"),
     path("catalogue/rescan/", views.catalogue_rescan, name="catalogue_rescan"),
     path("catalogue/disconnect/", views.catalogue_disconnect, name="catalogue_disconnect"),

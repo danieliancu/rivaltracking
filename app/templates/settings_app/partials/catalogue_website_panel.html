@@ -1,0 +1,54 @@
+{% load ui %}{% comment %} Website catalogue-source panel. While importing it polls
+   itself (hx load delay) so the count/status update live; once the import
+   settles the returned panel has no poll trigger and it stops. {% endcomment %}
+<div id="catalogue-website-panel" class="rounded-lg border p-3.5"
+     {% if website_source.status == "importing" %}
+     hx-get="{% url 'settings_app:catalogue_website_panel' %}"
+     hx-trigger="load delay:1500ms" hx-target="#catalogue-website-panel" hx-swap="outerHTML"
+     {% endif %}>
+  <div class="mb-2 flex items-center gap-2 text-sm font-bold">{% icon "globe" class="size-4 text-primary" %} Website</div>
+  {% if website_source %}
+    <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
+      {% if website_source.status == "importing" %}
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-info/10 px-2 py-0.5 font-semibold text-info">
+          {% icon "loader-2" class="size-3 animate-spin" %} Importing…</span>
+      {% elif website_source.status == "connected" %}
+        <span class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">{% icon "check" class="size-3" %} Connected</span>
+      {% elif website_source.status == "partial" %}
+        <span class="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning">Partially imported</span>
+      {% else %}
+        <span class="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 font-semibold text-destructive">Failed</span>
+      {% endif %}
+      <span class="text-muted-foreground">{{ website_source.website_url }}</span>
+    </div>
+    {% if website_source.status == "importing" %}
+      <div class="mb-2.5 flex items-center gap-2 rounded-md bg-info/5 px-3 py-2 text-xs text-info">
+        {% icon "loader-2" class="size-3.5 animate-spin" %}
+        <span>Crawling your store… <span class="font-bold">{{ website_source.products_found }}</span> product{{ website_source.products_found|pluralize }} imported so far.</span>
+      </div>
+    {% else %}
+      <div class="mb-2.5 grid grid-cols-3 gap-2 text-center">
+        <div class="rounded-md bg-muted/50 py-1.5"><div class="text-sm font-bold">{{ website_source.products_found }}</div><div class="text-[10px] text-muted-foreground">Products</div></div>
+        <div class="rounded-md bg-muted/50 py-1.5"><div class="text-sm font-bold">{{ website_source.errors_count }}</div><div class="text-[10px] text-muted-foreground">Errors</div></div>
+        <div class="rounded-md bg-muted/50 py-1.5"><div class="text-sm font-bold">{{ website_source.last_import_at|default:"—"|date:"H:i" }}</div><div class="text-[10px] text-muted-foreground">Last import</div></div>
+      </div>
+    {% endif %}
+    {% if website_source.error_summary and website_source.status != "importing" %}<p class="mb-2 text-[11px] text-destructive">{{ website_source.error_summary|truncatechars:160 }}</p>{% endif %}
+    <div class="flex gap-2">
+      <button type="button" hx-post="{% url 'settings_app:catalogue_rescan' %}" hx-target="#catalogue-website-panel" hx-swap="outerHTML"
+              {% if website_source.status == "importing" %}disabled class="pointer-events-none inline-flex h-8 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-semibold opacity-50"{% else %}class="inline-flex h-8 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-semibold hover:bg-accent"{% endif %}>{% icon "refresh-cw" class="size-3.5" %} Re-scan</button>
+      <button type="button" hx-post="{% url 'settings_app:catalogue_disconnect' %}" hx-target="#modal-root" hx-swap="innerHTML"
+              class="inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold text-destructive hover:bg-destructive/10">Disconnect</button>
+    </div>
+  {% else %}
+    <p class="mb-2 text-xs text-muted-foreground">RivalTracking crawls your own catalogue like a competitor's — no product is treated as a competitor.</p>
+    <form hx-post="{% url 'settings_app:catalogue_connect' %}" hx-target="#catalogue-website-panel" hx-swap="outerHTML" class="flex gap-2">
+      <input type="text" name="website_url" placeholder="mystore.co.uk" value="{{ website_url|default:'' }}"
+             class="h-8 flex-1 rounded-lg border border-input bg-card px-3 text-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+      <button type="submit" class="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:bg-primary/90">Connect</button>
+    </form>
+    {% if website_error %}<p class="mt-1.5 text-[11px] text-destructive">{{ website_error }}</p>{% endif %}
+  {% endif %}
+</div>
+{% comment %} Keep the header progress chip in sync whenever this panel renders. {% endcomment %}
+{% include "partials/import_status.html" with oob=True %}

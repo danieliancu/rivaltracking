@@ -119,10 +119,36 @@ def get_source(workspace, source_type="website"):
     ).first()
 
 
+def _dispatch_import(source):
+    """Run the import off the request thread so the UI can poll for progress.
+
+    Under a real broker the Celery worker owns it. In eager mode (local dev /
+    tests-via-runserver) ``.delay`` would block the request until the whole
+    crawl finished, so we run it in a background thread instead — the connect
+    request returns immediately with status=importing and the dialog polls.
+    """
+    from django.conf import settings as dj_settings
+    from . import tasks
+
+    if getattr(dj_settings, "CELERY_TASK_ALWAYS_EAGER", False):
+        import threading
+
+        from django.db import connection
+
+        def _run():
+            try:
+                tasks.import_catalogue(source.id)
+            finally:
+                connection.close()  # each thread owns its DB connection
+
+        threading.Thread(target=_run, daemon=True).start()
+    else:
+        tasks.import_catalogue.delay(source.id)
+
+
 def connect_website(workspace, url):
     """Create/update the website source and enqueue an import. Returns source."""
     from .models import OwnCatalogueSource
-    from . import tasks
 
     url = url.strip()
     if not url:
@@ -139,21 +165,30 @@ def connect_website(workspace, url):
             "website_url": url,
             "domain": domain,
             "status": OwnCatalogueSource.Status.IMPORTING,
+            "products_found": 0,
+            "errors_count": 0,
+            "error_summary": "",
         },
     )
-    tasks.import_catalogue.delay(source.id)
+    _dispatch_import(source)
     source.refresh_from_db()
     return source, None
 
 
 def rescan_website(workspace):
-    from . import tasks
+    from .models import OwnCatalogueSource
 
     source = get_source(workspace, "website")
     if source is None:
         return None
-    tasks.import_catalogue.delay(source.id)
+    OwnCatalogueSource.objects.filter(id=source.id).update(
+        status=OwnCatalogueSource.Status.IMPORTING,
+        products_found=0,
+        errors_count=0,
+        error_summary="",
+    )
     source.refresh_from_db()
+    _dispatch_import(source)
     return source
 
 

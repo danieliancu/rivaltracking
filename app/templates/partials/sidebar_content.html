@@ -24,15 +24,35 @@
   </ul>
 </div>
 
+<div class="shrink-0 px-3 pt-3">
+  {% comment %} Persistent own-catalogue status — always visible; opens the connect dialog. {% endcomment %}
+  <button type="button" @click="$store.ui.sidebarOpen = false"
+          hx-get="{% url 'settings_app:connect_catalogue' %}" hx-target="#modal-root" hx-swap="innerHTML"
+          class="flex w-full items-center gap-2.5 rounded-xl border bg-background p-3 text-left transition-colors hover:bg-sidebar-accent">
+    {% icon "store" class="size-4 shrink-0 text-primary" %}
+    <div class="min-w-0 flex-1 leading-tight">
+      {% if catalogue_import.active %}
+        <span class="block text-[11px] font-bold">Importing catalogue…</span>
+        <span class="block truncate text-[10px] text-muted-foreground">{{ catalogue_import.domain }} · {{ catalogue_import.count }} so far</span>
+      {% elif catalogue_import.connected %}
+        <span class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[10px] font-bold text-success">{% icon "check" class="size-3" %} Connected</span>
+        <span class="mt-1 block truncate text-[10px] text-muted-foreground">{{ catalogue_import.domain }} · {{ catalogue_import.count }} product{{ catalogue_import.count|pluralize }}</span>
+      {% else %}
+        <span class="block text-[11px] font-bold">Connect your catalogue</span>
+        <span class="block truncate text-[10px] text-muted-foreground">Unlock own-vs-market comparison</span>
+      {% endif %}
+    </div>
+  </button>
+</div>
+
 <div class="shrink-0 p-3">
   <div class="rounded-xl border bg-background p-3">
     <div class="mb-2.5 flex items-center gap-1.5 text-xs font-bold">
       {% icon "zap" class="size-3.5 text-primary" %}
       Daily Intelligence
     </div>
-    <div class="flex items-center justify-between py-1 text-[11px] text-muted-foreground"><span>New products</span><span class="font-bold text-foreground">37</span></div>
-    <div class="flex items-center justify-between py-1 text-[11px] text-muted-foreground"><span>Price reductions</span><span class="font-bold text-foreground">64</span></div>
-    <div class="flex items-center justify-between py-1 text-[11px] text-muted-foreground"><span>Now out of stock</span><span class="font-bold text-foreground">31</span></div>
-    <div class="flex items-center justify-between py-1 text-[11px] text-muted-foreground"><span>New promotions</span><span class="font-bold text-foreground">7</span></div>
+    {% for stat in daily_intelligence %}
+    <div class="flex items-center justify-between py-1 text-[11px] text-muted-foreground"><span>{{ stat.label }}</span><span class="font-bold text-foreground">{{ stat.value }}</span></div>
+    {% endfor %}
   </div>
 </div>

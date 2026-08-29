@@ -3,7 +3,6 @@
 candidate_dict rebuilds the Phase 1 candidate dict the templates consume so the
 Discovery UI is unchanged.
 """
-from .data import DISCOVERY_CLUSTERS
 from .models import DiscoveryCandidate
 
 DISCOVERY_TONES = {
@@ -77,16 +76,20 @@ def tone_class(candidate):
 
 
 def cluster_cards(request, active_cluster=None):
+    """Cluster filter chips derived from the workspace's own candidates.
+
+    No hardcoded categories: a workspace only ever sees the clusters its real
+    discovery candidates fall into (empty for a fresh workspace)."""
     candidates = _queryset(request).exclude(status=DiscoveryCandidate.Status.DISMISSED)
     counts = {}
     for cl in candidates.values_list("cluster", flat=True):
-        counts[cl] = counts.get(cl, 0) + 1
+        if cl:
+            counts[cl] = counts.get(cl, 0) + 1
+    # Keep the active filter chip visible even if its last candidate was removed.
+    if active_cluster and active_cluster not in counts:
+        counts[active_cluster] = 0
+    ordered = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
     return [
-        {
-            "id": c["id"],
-            "label": c["label"],
-            "count": counts.get(c["id"], 0),
-            "active": active_cluster == c["id"],
-        }
-        for c in DISCOVERY_CLUSTERS
+        {"id": cl, "label": cl, "count": n, "active": active_cluster == cl}
+        for cl, n in ordered
     ]

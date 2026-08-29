@@ -77,14 +77,33 @@ def connect_catalogue(request):
     return _catalogue_dialog(request)
 
 
+def _website_panel(request, **extra):
+    return render(
+        request,
+        "settings_app/partials/catalogue_website_panel.html",
+        _catalogue_dialog_context(request, **extra),
+    )
+
+
+def catalogue_website_panel(request):
+    """Just the website source panel — polled while an import is running."""
+    return _website_panel(request)
+
+
+def import_status(request):
+    """Header catalogue-import progress chip — polled while an import runs
+    (context comes from the shell context processor)."""
+    return render(request, "partials/import_status.html")
+
+
 @require_POST
 def catalogue_connect(request):
     from apps.catalogue import services as catalogue_services
 
-    source, error = catalogue_services.connect_website(
+    _, error = catalogue_services.connect_website(
         request.workspace, request.POST.get("website_url", "")
     )
-    return _catalogue_dialog(request, website_error=error)
+    return _website_panel(request, website_error=error)
 
 
 @require_POST
@@ -92,7 +111,7 @@ def catalogue_rescan(request):
     from apps.catalogue import services as catalogue_services
 
     catalogue_services.rescan_website(request.workspace)
-    return _catalogue_dialog(request)
+    return _website_panel(request)
 
 
 @require_POST

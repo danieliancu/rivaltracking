@@ -9,43 +9,7 @@
 
 <div class="flex flex-col gap-4">
   {# ---- Website ---- #}
-  <div class="rounded-lg border p-3.5">
-    <div class="mb-2 flex items-center gap-2 text-sm font-bold">{% icon "globe" class="size-4 text-primary" %} Website</div>
-    {% if website_source %}
-      <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
-        {% if website_source.status == "importing" %}
-          <span class="inline-flex items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 font-semibold text-info">Importing…</span>
-        {% elif website_source.status == "connected" %}
-          <span class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">{% icon "check" class="size-3" %} Connected</span>
-        {% elif website_source.status == "partial" %}
-          <span class="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning">Partially imported</span>
-        {% else %}
-          <span class="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 font-semibold text-destructive">Failed</span>
-        {% endif %}
-        <span class="text-muted-foreground">{{ website_source.website_url }}</span>
-      </div>
-      <div class="mb-2.5 grid grid-cols-3 gap-2 text-center">
-        <div class="rounded-md bg-muted/50 py-1.5"><div class="text-sm font-bold">{{ website_source.products_found }}</div><div class="text-[10px] text-muted-foreground">Products</div></div>
-        <div class="rounded-md bg-muted/50 py-1.5"><div class="text-sm font-bold">{{ website_source.errors_count }}</div><div class="text-[10px] text-muted-foreground">Errors</div></div>
-        <div class="rounded-md bg-muted/50 py-1.5"><div class="text-sm font-bold">{{ website_source.last_import_at|default:"—"|date:"H:i" }}</div><div class="text-[10px] text-muted-foreground">Last import</div></div>
-      </div>
-      {% if website_source.error_summary %}<p class="mb-2 text-[11px] text-destructive">{{ website_source.error_summary|truncatechars:160 }}</p>{% endif %}
-      <div class="flex gap-2">
-        <button type="button" hx-post="{% url 'settings_app:catalogue_rescan' %}" hx-target="#modal-root" hx-swap="innerHTML"
-                class="inline-flex h-8 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-semibold hover:bg-accent">{% icon "refresh-cw" class="size-3.5" %} Re-scan</button>
-        <button type="button" hx-post="{% url 'settings_app:catalogue_disconnect' %}" hx-target="#modal-root" hx-swap="innerHTML"
-                class="inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold text-destructive hover:bg-destructive/10">Disconnect</button>
-      </div>
-    {% else %}
-      <p class="mb-2 text-xs text-muted-foreground">RivalTracking crawls your own catalogue like a competitor's — no product is treated as a competitor.</p>
-      <form hx-post="{% url 'settings_app:catalogue_connect' %}" hx-target="#modal-root" hx-swap="innerHTML" class="flex gap-2">
-        <input type="text" name="website_url" placeholder="mystore.co.uk" value="{{ website_url|default:'' }}"
-               class="h-8 flex-1 rounded-lg border border-input bg-card px-3 text-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
-        <button type="submit" class="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:bg-primary/90">Connect</button>
-      </form>
-      {% if website_error %}<p class="mt-1.5 text-[11px] text-destructive">{{ website_error }}</p>{% endif %}
-    {% endif %}
-  </div>
+  {% include "settings_app/partials/catalogue_website_panel.html" %}
 
   {# ---- CSV ---- #}
   <div class="rounded-lg border p-3.5">

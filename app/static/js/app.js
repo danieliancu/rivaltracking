@@ -19,6 +19,36 @@ document.addEventListener("alpine:init", () => {
     },
   }));
 
+  // Dropdown that must escape a clipping/scrolling ancestor (e.g. a table's
+  // overflow-x-auto). The menu markup is teleported to <body> and positioned
+  // fixed, anchored to the trigger's right edge — so it is never clipped.
+  Alpine.data("anchoredMenu", () => ({
+    open: false,
+    top: 0,
+    left: 0,
+    toggle() {
+      this.open ? this.close() : this.show();
+    },
+    show() {
+      const r = this.$refs.trigger.getBoundingClientRect();
+      this.top = r.bottom + 4;
+      this.left = r.right;
+      this.open = true;
+    },
+    close() {
+      this.open = false;
+    },
+    get menuStyle() {
+      return (
+        "position:fixed;top:" +
+        this.top +
+        "px;left:" +
+        this.left +
+        "px;transform:translateX(-100%);z-index:60;"
+      );
+    },
+  }));
+
   // Drawer/dialog fragment lifecycle: animates in on load, removes itself
   // from #drawer-root / #modal-root on close.
   Alpine.data("overlay", () => ({

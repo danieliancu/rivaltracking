@@ -6,8 +6,6 @@ stamps the row as freshly scanned.
 """
 import re
 
-from django.utils import timezone
-
 from apps.core.entities import competitor_tone, slugify
 
 from . import selectors
@@ -39,10 +37,16 @@ def _workspace(request):
 
 
 def add_competitor(request, url):
-    """Future: POST /api/competitors"""
+    """Create a competitor from a URL and queue its first real scan.
+
+    No fabricated headline metrics: products_count/market stay empty until a
+    scan populates them (locally, without SCANNING_LIVE, that means 0 products).
+    """
+    from apps.scanning.models import ScanJob
+    from apps.scanning.services import enqueue_scan
+
     workspace = _workspace(request)
     fields = _fields_from_url(url)
-    now = timezone.now()
     competitor, created = Competitor.objects.get_or_create(
         workspace=workspace,
         slug=fields["slug"],
@@ -50,15 +54,14 @@ def add_competitor(request, url):
             "name": fields["name"],
             "domain": fields["domain"],
             "website_url": f"https://{fields['domain']}",
-            "market": "UK Toys",
             "status": Competitor.Status.INITIALISING,
             "monitoring_enabled": True,
             "tone": competitor_tone(fields["name"]),
-            "products_count": 1824,
-            "last_scan_at": now,
-            "next_scan_at": now + timezone.timedelta(hours=24),
         },
     )
+    if created:
+        enqueue_scan(competitor, trigger=ScanJob.Trigger.INITIAL)
+        competitor.refresh_from_db()
     return selectors.row_dict(competitor)
 
 

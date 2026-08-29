@@ -54,7 +54,8 @@ def shell(request):
     from apps.alerts.models import Alert
     from apps.competitors import selectors as competitor_selectors
 
-    unread = Alert.objects.for_workspace(getattr(request, "workspace", None)).filter(
+    workspace = getattr(request, "workspace", None)
+    unread = Alert.objects.for_workspace(workspace).filter(
         status=Alert.Status.NEW
     ).count()
     competitors = competitor_selectors.header_list(request)
@@ -67,6 +68,57 @@ def shell(request):
         "date_range": request.session.get("date_range", "30d"),
         "header_competitors": competitors,
         "scan_context": scan_context,
-        "current_workspace": getattr(request, "workspace", None),
+        "daily_intelligence": _daily_intelligence(workspace),
+        "catalogue_import": _catalogue_import(workspace),
+        "current_workspace": workspace,
         "current_membership": getattr(request, "membership", None),
+    }
+
+
+def _daily_intelligence(workspace):
+    """Today's change counts for the sidebar panel — real ChangeEvent data,
+    all zero for a fresh workspace (never fabricated)."""
+    from django.db.models import Count
+    from django.utils import timezone
+
+    from apps.changes.models import ChangeEvent
+
+    today = timezone.localdate()
+    counts = dict(
+        ChangeEvent.objects.for_workspace(workspace)
+        .filter(detected_at__date=today)
+        .values_list("event_type")
+        .annotate(n=Count("id"))
+    )
+    T = ChangeEvent.Type
+    return [
+        {"label": "New products", "value": counts.get(T.PRODUCT_NEW, 0)},
+        {"label": "Price reductions", "value": counts.get(T.PRICE_DECREASE, 0)},
+        {"label": "Now out of stock", "value": counts.get(T.STOCK_OUT, 0)},
+        {"label": "New promotions", "value": counts.get(T.PROMOTION_STARTED, 0)},
+    ]
+
+
+def _catalogue_import(workspace):
+    """Live website-import status for the header progress chip (None if the
+    workspace has never connected a website source)."""
+    from apps.catalogue.models import OwnCatalogueSource
+
+    src = (
+        OwnCatalogueSource.objects.filter(
+            workspace=workspace,
+            source_type=OwnCatalogueSource.SourceType.WEBSITE,
+        )
+        .only("status", "products_found", "domain", "website_url")
+        .first()
+    )
+    if src is None:
+        return None
+    return {
+        "status": src.status,
+        "active": src.status == OwnCatalogueSource.Status.IMPORTING,
+        "connected": src.status
+        in (OwnCatalogueSource.Status.CONNECTED, OwnCatalogueSource.Status.PARTIAL),
+        "count": src.products_found or 0,
+        "domain": src.domain or src.website_url,
     }

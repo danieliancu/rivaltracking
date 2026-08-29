@@ -234,6 +234,14 @@ def monitoring_drawer(request, slug):
     )
 
 
+def remove_dialog(request, slug):
+    """Remove-competitor confirm dialog (HTMX → #modal-root)."""
+    row = selectors.by_slug(request, slug)
+    if row is None:
+        raise Http404
+    return render(request, "competitors/partials/remove_dialog.html", {"row": row})
+
+
 @require_POST
 def save_monitoring(request, slug):
     row = selectors.by_slug(request, slug)

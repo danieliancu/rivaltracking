@@ -12,6 +12,7 @@ urlpatterns = [
     path("<slug:slug>/products/", views.products_fragment, name="products_fragment"),
     path("<slug:slug>/scan/", views.run_scan, name="run_scan"),
     path("<slug:slug>/pause/", views.pause_resume, name="pause_resume"),
+    path("<slug:slug>/remove-dialog/", views.remove_dialog, name="remove_dialog"),
     path("<slug:slug>/remove/", views.remove, name="remove"),
     path("<slug:slug>/monitoring/", views.monitoring_drawer, name="monitoring_drawer"),
     path("<slug:slug>/monitoring/save/", views.save_monitoring, name="save_monitoring"),

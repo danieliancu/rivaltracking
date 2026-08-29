@@ -224,3 +224,15 @@ LOGGING = {
         },
     },
 }
+
+
+# Robust SQLite for local dev and the demo SQLite fallback. Eager imports/scans
+# run inside the request and hold write transactions while runserver's threaded
+# requests also touch the DB; WAL keeps reads from blocking, IMMEDIATE takes the
+# write lock up front, and a generous busy timeout absorbs contention instead of
+# raising "database is locked". Production uses PostgreSQL and ignores this.
+SQLITE_OPTIONS = {
+    "timeout": 30,
+    "transaction_mode": "IMMEDIATE",
+    "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
+}

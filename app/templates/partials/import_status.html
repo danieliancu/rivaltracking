@@ -1,0 +1,16 @@
+{% load ui %}{% comment %} Global catalogue-import progress chip, shown in the header
+   between search and the range tabs. Visible only while an import runs; it polls
+   itself and disappears when done. On mobile it wraps onto its own row. The
+   `catalogue_import` context comes from apps.core.context_processors.shell; the
+   connect/rescan responses swap this in out-of-band so it appears immediately. {% endcomment %}
+<div id="import-status"
+     class="{% if catalogue_import.active %}order-last basis-full md:order-none md:basis-auto{% else %}hidden{% endif %}"
+     {% if oob %}hx-swap-oob="true"{% endif %}
+     {% if catalogue_import.active %}hx-get="{% url 'settings_app:import_status' %}" hx-trigger="load delay:2500ms" hx-target="#import-status" hx-swap="outerHTML"{% endif %}>
+  {% if catalogue_import.active %}
+  <span class="inline-flex items-center gap-1.5 rounded-full border border-info/30 bg-info/10 px-2.5 py-1 text-[11px] font-semibold text-info">
+    {% icon "loader-2" class="size-3 animate-spin" %}
+    Importing catalogue… <span class="tabular-nums">{{ catalogue_import.count }}</span>
+  </span>
+  {% endif %}
+</div>

@@ -69,21 +69,50 @@ def create_and_dispatch_scheduled(competitor):
     return job
 
 
+def _dispatch_scan_job(job):
+    """Send a ScanJob to a worker, or run it off-thread for local live scans.
+
+    Under a real broker the worker owns it. In eager mode a live scan would
+    otherwise block the web request for the whole crawl, so when both eager and
+    SCANNING_LIVE are on we run it in a background thread and mark the competitor
+    ``scanning`` immediately (the table/detail then reflect progress). Eager +
+    non-live (tests, offline dev) stays inline so results are ready on return.
+    """
+    from . import tasks
+
+    if settings.CELERY_TASK_ALWAYS_EAGER and settings.SCANNING_LIVE:
+        import threading
+
+        from django.db import connection
+
+        Competitor.objects.filter(id=job.competitor_id).update(
+            status=Competitor.Status.SCANNING
+        )
+
+        def _run():
+            try:
+                execute_scan_job(job.id)
+            finally:
+                connection.close()  # each thread owns its DB connection
+
+        threading.Thread(target=_run, daemon=True).start()
+    else:
+        tasks.run_scan_job.delay(job.id)
+
+
 def enqueue_scan(competitor, *, trigger=ScanJob.Trigger.MANUAL):
     """Create a queued ScanJob and dispatch it to the scraping queue.
 
     Skips creating a duplicate if the competitor already has an active job.
     Returns the ScanJob (existing active one, or the newly created).
     """
-    from . import tasks
-
     active = ScanJob.objects.filter(
         competitor=competitor, status__in=[ScanJob.Status.QUEUED, ScanJob.Status.RUNNING]
     ).first()
     if active is not None:
         return active
     job = create_scan_job(competitor, trigger=trigger)
-    tasks.run_scan_job.delay(job.id)
+    _dispatch_scan_job(job)
     return job
 
 
@@ -151,11 +180,25 @@ def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
             job.id, job.status, job.pages_requested, job.products_found,
             job.changes_detected, job.errors_count,
         )
+        from apps.catalogue.models import ProductListing
+
+        product_count = ProductListing.objects.filter(
+            competitor_id=competitor.id, active=True
+        ).count()
+        settled = job.status in (
+            ScanJob.Status.COMPLETED,
+            ScanJob.Status.PARTIALLY_FAILED,
+        )
+        pre_active = competitor.status in (
+            Competitor.Status.SCANNING,
+            Competitor.Status.INITIALISING,
+        )
         Competitor.objects.filter(id=competitor.id).update(
             last_scan_at=job.finished_at,
             next_scan_at=next_scan_time(competitor, job.finished_at),
+            products_count=product_count,
             status=Competitor.Status.HEALTHY
-            if job.status == ScanJob.Status.COMPLETED and competitor.status == Competitor.Status.SCANNING
+            if settled and pre_active
             else competitor.status,
         )
         release_scan_lock(competitor.id)

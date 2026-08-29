@@ -1,6 +1,6 @@
 """Local development settings: SQLite, DEBUG on, permissive defaults."""
 from .base import *  # noqa: F401,F403
-from .base import BASE_DIR, env
+from .base import BASE_DIR, SQLITE_OPTIONS, env
 
 DEBUG = True
 
@@ -12,5 +12,6 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": SQLITE_OPTIONS,
     }
 }

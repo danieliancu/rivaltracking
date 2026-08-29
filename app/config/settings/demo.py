@@ -5,7 +5,7 @@ Uses PostgreSQL when DB_HOST is provided (the Phase 2 target), otherwise falls
 back to the Phase 1 SQLite file so the existing demo keeps working unchanged.
 """
 from .base import *  # noqa: F401,F403
-from .base import BASE_DIR, MIDDLEWARE, env
+from .base import BASE_DIR, MIDDLEWARE, SQLITE_OPTIONS, env
 
 DEBUG = False
 
@@ -40,6 +40,7 @@ else:
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
+            "OPTIONS": SQLITE_OPTIONS,
         }
     }
 

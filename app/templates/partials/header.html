@@ -1,5 +1,5 @@
 {% load ui %}
-<header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur-md md:px-6">
+<header class="sticky top-0 z-20 flex min-h-16 flex-wrap items-center gap-3 border-b bg-card/90 px-4 py-2.5 backdrop-blur-md md:flex-nowrap md:py-0 md:px-6">
   <button type="button" x-data @click="$store.ui.sidebarOpen = true" aria-label="Open sidebar"
           class="inline-flex size-7 items-center justify-center rounded-md text-foreground hover:bg-accent hover:text-accent-foreground md:hidden">
     {% icon "panel-left" class="size-4" %}
@@ -19,6 +19,8 @@
       <div id="search-results" class="max-h-[300px] overflow-y-auto overscroll-contain"></div>
     </div>
   </div>
+
+  {% include "partials/import_status.html" %}
 
   {% include "partials/range_tabs.html" %}
 

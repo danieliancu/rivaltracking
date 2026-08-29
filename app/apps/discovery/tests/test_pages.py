@@ -166,7 +166,8 @@ def test_empty_state_after_dismissing_all(client):
     content = response.content.decode()
     assert "No discoveries yet" in content
     assert "Add competitor by URL" in content
-    assert "0 potential competitors" in content
+    # Cluster chips derive from real candidates, so none remain once all are gone.
+    assert "potential competitor" not in content
 
 
 def test_run_restores_dismissed(client):
