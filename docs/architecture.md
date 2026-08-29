@@ -186,3 +186,81 @@ animation.
   (S3-compatible). Phase 1 ships local placeholder SVGs; the
   `{% product_thumbnail %}` component already renders real images when a
   product has one, with an icon-tile fallback.
+
+## Phase 3 — intelligence engine (implemented)
+
+Phase 3 adds the processing layer beneath the app: Celery + Redis, scheduled
+crawling, deterministic scraping/extraction/normalisation, change detection,
+matching, discovery, an AI abstraction, alert evaluation and report generation.
+The `View → Selector / Service → Template` layering is unchanged; engine output
+flows into the same selectors, so the UI is not redesigned.
+
+### Processing pipeline
+
+```
+Competitor ─ Discovery ─ Fetcher(HTTP→browser*) ─ Extractor(JSON-LD→state→DOM→adapter→generic)
+  → Normalizer → ProductListing (upsert, last_seen) → Price/Stock/Promotion snapshots
+  → Change detection → ChangeEvent ─┬─ Matching → canonical Product → own-catalogue metrics
+                                     ├─ Alert evaluation → Alert (in-app / email)
+                                     └─ significance funnel → AI analysis (ChangeAnalysis)
+Ask AI / Reports / Dashboard read the resulting real data.
+```
+
+### Async backbone (Celery + Redis)
+
+`config/celery.py` defines one app with six routed queues — `scraping`,
+`processing`, `matching`, `ai`, `alerts`, `reports` — so heavy scraping/AI never
+starves lightweight work. Tasks take **IDs only** and re-resolve the workspace
+and entities (never trust a passed object). Beat runs `dispatch_due_scans`
+(enqueues due competitor scans, deduped by a cache lock + active-job check) and
+`dispatch_due_schedules`. Tasks are idempotent; failures are isolated (a failed
+page ≠ failed scan; a failed AI/alert ≠ rolled-back changes; `partially_failed`
+status). Eager mode (inline, no broker) is the default locally/in tests.
+
+### Scraping (`apps/scanning/scraping/`)
+
+Pluggable `fetchers/` (HTTP default; optional Playwright), `extractors/`
+(JSON-LD → DOM, structured before heuristics, **never AI**), `normalizers/`
+(deterministic price/currency/stock/identifier), `adapters/`
+(generic/shopify/woocommerce via a registry) and `discovery/` (sitemap +
+product-URL patterns). The orchestrator applies per-domain rate limiting, a
+`SCAN_MAX_PAGES` cap, `DiscoveredUrl` dedup and bounded `RawCapture` evidence,
+and is fetcher-injectable so tests drive it from fixtures with no network.
+
+### New models
+
+`scanning`: ScanJob, DiscoveredUrl, RawCapture. `matching`: MatchResult.
+`changes`: ChangeEvent (Phase 2) now written by detection. `ai`: Conversation,
+Message, ChangeAnalysis. `alerts`: AlertRule, Alert. `reports`: Report,
+ReportSchedule. `discovery`: DiscoveryCandidate. All workspace-scoped.
+
+### Change detection, matching, discovery
+
+Detection compares a listing's previous vs new normalised state and emits
+idempotent ChangeEvents; **significance** (impact) is a separate module.
+Matching links listings to a canonical Product deterministically
+(GTIN → MPN+brand → SKU → title similarity), auto-merging high-confidence
+matches. Discovery scores candidates by catalogue overlap (a search/links
+provider is a documented seam).
+
+### AI
+
+`apps/ai/providers/` — an `AIProvider` interface with a deterministic
+`StubProvider` (default, offline) and an `OpenAIProvider` (opt-in). AI runs on
+the `ai` queue over **structured events/facts only** (never raw pages): a
+significance funnel selects a small set of ChangeEvents for `analyse_change`,
+and Ask AI answers via workspace-scoped retrieval tools (`apps/ai/tools.py`) so
+answers can never cross tenants.
+
+### Scalability
+
+Changes filtering/sorting/pagination run in the database; global search uses
+PostgreSQL trigram ranking (icontains on SQLite) over name/SKU/GTIN. Indexes
+cover workspace+time, competitor+time, listing+captured_at, event type,
+active/status and product identifiers.
+
+### Deferred (seams in place)
+
+Real Playwright rendering, image thumbnail/object-storage wiring, PDF export,
+semantic/embedding matching, proxy pool, Stripe/plan enforcement. Live crawling
+is validated against fixtures — tests never hit the network or live AI.

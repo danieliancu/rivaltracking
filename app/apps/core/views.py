@@ -3,7 +3,6 @@ from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 
 from apps.core.search import global_search
-from apps.core.store import WorkspaceStore
 
 
 @require_GET
@@ -80,7 +79,6 @@ def reset_demo(request):
 
     if getattr(request, "workspace", None) is not None:
         seed_workspace(request.workspace)
-        WorkspaceStore(request).reset()
     request.session.pop("date_range", None)
     request.session.pop("selected_competitor", None)
     response = HttpResponse(status=204)

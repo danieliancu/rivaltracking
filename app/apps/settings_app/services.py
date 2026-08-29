@@ -154,7 +154,5 @@ def delete_workspace(request):
     the tenant (which would sign the user out mid-demo).
     """
     from apps.core.seed import seed_workspace
-    from apps.core.store import WorkspaceStore
 
     seed_workspace(request.workspace)
-    WorkspaceStore(request).reset()

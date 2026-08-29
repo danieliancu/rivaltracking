@@ -85,6 +85,44 @@ covers authentication, workspace membership, **tenant isolation**, competitor/
 product/listing relationships, price/stock history, change events, selectors,
 HTMX fragments, pagination/filtering and the seed command.
 
+## Running the processing engine locally (Phase 3)
+
+The engine (scraping, change detection, matching, AI, alerts, reports) runs on
+Celery. Locally, tasks execute **eagerly** (inline, no broker) and live scraping
+is **off** by default, so `runserver` alone exercises everything against seeded
+data and the test fixtures — no Redis needed.
+
+To run the real asynchronous engine locally, start Redis and workers:
+
+```bash
+# Terminal 1 — web
+CELERY_TASK_ALWAYS_EAGER=0 python manage.py runserver
+# Terminal 2 — worker (all queues)
+CELERY_TASK_ALWAYS_EAGER=0 celery -A config worker -l info \
+  -Q scraping,processing,matching,ai,alerts,reports
+# Terminal 3 — beat (scheduler; never run inside the web process)
+CELERY_TASK_ALWAYS_EAGER=0 celery -A config beat -l info
+```
+
+Set `SCANNING_LIVE=1` to fetch real competitor sites; `AI_PROVIDER=openai` +
+`OPENAI_API_KEY` to use OpenAI (default is the offline deterministic stub).
+Browser (JS) rendering is optional: build `requirements/browser.txt`, run
+`playwright install chromium`, and set `BROWSER_ENABLED=1` on a dedicated worker.
+
+### Pipeline
+
+```
+Competitor ─ Discovery ─ Fetcher(HTTP→browser*) ─ Extractor(JSON-LD→DOM→adapter)
+  → Normalizer → ProductListing → Price/Stock/Promotion snapshots
+  → Change detection → ChangeEvent ─┬─ Matching → canonical Product → own-price metrics
+                                     ├─ Alert evaluation → Alert (in-app/email)
+                                     └─ significance funnel → AI analysis (ChangeAnalysis)
+Ask AI / Reports / Overview read the resulting real data.
+```
+
+Deterministic before AI, HTTP before browser, structured data before DOM,
+events before AI — AI only interprets structured results.
+
 ## Deploying with PostgreSQL (Coolify)
 
 The Phase 1 demo ran on SQLite. To run Phase 2 against a Coolify PostgreSQL
@@ -113,8 +151,59 @@ python manage.py seed_demo
 ```
 
 WhiteNoise serves the built static files (`collectstatic` runs in the
-Dockerfile). No Redis, Celery or scraping workers are involved yet — those
-arrive in Phase 3.
+Dockerfile).
+
+### Phase 3 services on Coolify
+
+Deploy five processes from the same image (Redis + Postgres as managed
+resources):
+
+| Service | Command |
+|---|---|
+| web | `gunicorn config.wsgi:application --bind 0.0.0.0:8000` (Dockerfile also runs `migrate`) |
+| worker | `celery -A config worker -l info -Q scraping,processing,matching,ai,alerts,reports` |
+| beat | `celery -A config beat -l info` (never in the web process) |
+| redis | managed Redis resource |
+| postgres | managed PostgreSQL resource |
+
+An optional `browser-worker` (built from `requirements/browser.txt`, `BROWSER_ENABLED=1`,
+`-Q scraping`) handles JS-rendered pages. Extra env for the engine:
+
+```
+REDIS_URL=redis://<redis-host>:6379/0
+CELERY_TASK_ALWAYS_EAGER=0
+SCANNING_LIVE=1
+AI_PROVIDER=openai            # or leave unset for the deterministic stub
+OPENAI_API_KEY=sk-...
+CELERY_WORKER_CONCURRENCY=4   # tune to the VPS; browser workers stay small
+```
+
+After deploy: `python manage.py migrate` (automatic), then `python manage.py
+seed_demo` once for the demo workspace. Recommended minimum: 1 web, 1 worker
+(concurrency 2-4), 1 beat, Redis, Postgres; scale workers per queue as scan
+volume grows. Health check: `GET /accounts/login/` (200).
+
+## Implementation status (Phase 3 — intelligence engine)
+
+Phase 3 added the real processing engine beneath the app:
+
+- **Celery + Redis** with six routed queues (scraping/processing/matching/ai/
+  alerts/reports) and a beat scheduler; eager (no-broker) mode for local/tests.
+- **Scan engine**: ScanJob + a pluggable HTTP fetcher → JSON-LD/DOM extractor →
+  deterministic normaliser → ProductListing upsert, with sitemap/pattern URL
+  discovery, per-domain rate limiting, evidence capture and safe removal.
+- **Change detection** → idempotent ChangeEvents (+ separate significance);
+  **product matching** (GTIN→MPN→SKU→title) with confidence/method; **own-price
+  metrics**; **competitor discovery** by catalogue overlap.
+- **AI** provider abstraction (OpenAI + deterministic stub default): change
+  analysis on a significance funnel, Ask AI over workspace-scoped retrieval
+  tools, persisted conversations.
+- **Alert evaluation** (in-app + email) and **report generation** (deterministic
+  metrics + AI narrative) from real data; DB-level changes filtering + trigram
+  search; scan-health observability.
+
+Everything stays workspace-isolated; Playwright/PDF/image-storage/embeddings are
+scaffolded seams (see `docs/architecture.md`).
 
 ## Implementation status (Phase 2 — product foundation)
 
