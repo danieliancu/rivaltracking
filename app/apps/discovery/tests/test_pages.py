@@ -167,7 +167,7 @@ def test_empty_state_after_dismissing_all(client):
     response = client.get(reverse("discovery:index"))
     content = response.content.decode()
     assert "No discoveries yet" in content
-    assert "Run discovery to find companies with overlapping catalogues." in content
+    assert "Add competitor by URL" in content
     assert "0 potential competitors" in content
 
 
