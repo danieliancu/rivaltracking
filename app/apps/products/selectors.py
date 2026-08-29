@@ -19,7 +19,7 @@ from apps.core.format import relative_time
 from apps.core.selectors import paginate, to_int
 
 from . import filters
-from .data import ACTIVE_CATEGORIES, FILTER_OPTIONS, PRICE_MOVEMENT, PRODUCT_KPIS, SORT_OPTIONS
+from .data import FILTER_OPTIONS, PRODUCT_KPIS, SORT_OPTIONS
 from .models import WatchlistItem
 
 KPI_ICONS = {
@@ -151,34 +151,63 @@ def kpi_cards(request):
     ]
 
 
-def price_movement_card():
-    """products/price-movement.tsx — legend counts + line chart payload.
+def price_movement_card(request):
+    """Legend counts + line chart derived from real price ChangeEvents (30d)."""
+    from datetime import timedelta
 
-    Presentational analytics (headline chart); the real time series is a Phase 3
-    aggregation. Kept from the deterministic seed so the chart stays populated.
-    """
-    series = PRICE_MOVEMENT["series"]
+    from django.db.models import Count
+    from django.db.models.functions import TruncDate
+
+    from apps.changes.models import ChangeEvent
+
+    ws = _workspace(request)
+    since = timezone.now() - timedelta(days=30)
+    events = ChangeEvent.objects.for_workspace(ws).filter(detected_at__gte=since)
+    decreases = events.filter(event_type=ChangeEvent.Type.PRICE_DECREASE)
+    increases = events.filter(event_type=ChangeEvent.Type.PRICE_INCREASE)
+
+    def _by_day(qs):
+        return {
+            row["d"]: row["n"]
+            for row in qs.annotate(d=TruncDate("detected_at")).values("d").annotate(n=Count("id"))
+        }
+
+    dec_by_day, inc_by_day = _by_day(decreases), _by_day(increases)
+    days = sorted(set(dec_by_day) | set(inc_by_day))
+    labels = [f"{d:%b} {d.day}" for d in days]
     return {
-        "decreases": PRICE_MOVEMENT["decreases"],
-        "increases": PRICE_MOVEMENT["increases"],
+        "decreases": decreases.count(),
+        "increases": increases.count(),
         "chart": {
             "type": "line",
-            "labels": [p["date"] for p in series],
+            "labels": labels,
             "series": [
-                {"label": "Price decreases", "data": [p["decreases"] for p in series], "color": "success"},
-                {"label": "Price increases", "data": [p["increases"] for p in series], "color": "destructive", "dashed": True},
+                {"label": "Price decreases", "data": [dec_by_day.get(d, 0) for d in days], "color": "success"},
+                {"label": "Price increases", "data": [inc_by_day.get(d, 0) for d in days], "color": "destructive", "dashed": True},
             ],
             "options": {},
         },
     }
 
 
-def active_categories_chart():
-    """products/active-categories.tsx — horizontal bars with value labels."""
+def active_categories_chart(request):
+    """Horizontal bars of the most-active product categories (real ChangeEvents)."""
+    from django.db.models import Count
+
+    from apps.changes.models import ChangeEvent
+
+    rows = (
+        ChangeEvent.objects.for_workspace(_workspace(request))
+        .exclude(product__isnull=True)
+        .exclude(product__category="")
+        .values("product__category")
+        .annotate(n=Count("id"))
+        .order_by("-n")[:5]
+    )
     return {
         "type": "hbar",
-        "labels": [c["name"] for c in ACTIVE_CATEGORIES],
-        "series": [{"data": [c["changes"] for c in ACTIVE_CATEGORIES], "color": "chart-1"}],
+        "labels": [r["product__category"] for r in rows],
+        "series": [{"data": [r["n"] for r in rows], "color": "chart-1"}],
         "options": {"labels": True, "barSize": 16, "labelWidth": 112},
     }
 

@@ -57,8 +57,8 @@ def index(request):
         **state,
         "table_url": reverse("products:index"),
         "kpis": selectors.kpi_cards(request),
-        "price_movement": selectors.price_movement_card(),
-        "categories_chart": selectors.active_categories_chart(),
+        "price_movement": selectors.price_movement_card(request),
+        "categories_chart": selectors.active_categories_chart(request),
         "filter_options": selectors.filter_options(request),
         "ask_ai_href": reverse("ai:index")
         + "?"
@@ -107,7 +107,7 @@ def detail(request, slug):
         "ask_ai_url": reverse("ai:index") + f"?product={row['slug']}",
         "changes_url": reverse("changes:index") + f"?product={row['slug']}",
         "ai_title": f"AI Analysis — {row['name']}",
-        "price_movement": selectors.price_movement_card() if tab == "price-history" else None,
+        "price_movement": selectors.price_movement_card(request) if tab == "price-history" else None,
     }
     return render(request, "products/detail.html", context)
 

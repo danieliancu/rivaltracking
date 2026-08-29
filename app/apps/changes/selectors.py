@@ -17,12 +17,9 @@ from apps.core.selectors import PAGE_SIZE, paginate, to_int
 
 from . import filters
 from .data import (
-    CHANGE_ACTIVITY,
     CHANGE_FILTER_OPTIONS,
     CHANGE_KPIS,
-    CHANGE_PATTERNS,
     CHANGE_SORT_OPTIONS,
-    COMPETITOR_ACTIVITY,
     SAVED_VIEWS,
 )
 from .models import ChangeEvent
@@ -149,12 +146,7 @@ def parse_request(request):
     sort_param = params.get("sort")
     sort = sort_param if filters.is_valid_change_sort(sort_param) else "recent"
     page = max(1, to_int(params.get("page"), 1))
-    pattern = next(
-        (p for p in CHANGE_PATTERNS if p["id"] == params.get("pattern")), None
-    )
-    if pattern:
-        f = filters.pattern_filters(pattern)
-    return f, sort, page, pattern
+    return f, sort, page, None
 
 
 def _apply_db_filters(qs, f):
@@ -316,21 +308,60 @@ def saved_view_options(request):
     return out
 
 
-def pattern_cards(request):
-    """CHANGE_PATTERNS with the CTA deep link (?pattern=… + mapped filters)."""
+_PATTERN_META = {
+    "drop": ("trending-down", "text-success"),
+    "increase": ("trending-up", "text-destructive"),
+    "oos": ("package-x", "text-warning"),
+    "back": ("package-check", "text-success"),
+    "new": ("sparkles", "text-info"),
+    "removed": ("trash-2", "text-destructive"),
+    "promo": ("badge-percent", "text-purple"),
+}
+_KIND_LABEL = {
+    "drop": "price drops", "increase": "price rises", "oos": "stock-outs",
+    "back": "restocks", "new": "new products", "removed": "removals",
+    "promo": "promotions",
+}
+
+
+def pattern_cards(request, limit=3):
+    """Derived 'major change patterns' — real (competitor, kind) clusters."""
+    from datetime import timedelta
+
+    from django.db.models import Count
+
+    since = timezone.now() - timedelta(days=7)
+    rows = (
+        _events_qs(request)
+        .filter(detected_at__gte=since)
+        .values("competitor__name", "competitor__slug", "kind")
+        .annotate(n=Count("id"))
+        .order_by("-n")[: limit * 2]
+    )
     cards = []
-    for p in CHANGE_PATTERNS:
-        stored = p["filters"]
-        params = []
-        if stored.get("competitor"):
-            params.append(("competitor", _slug_for(request, stored["competitor"])))
-        if stored.get("kind"):
-            params.append(("type", stored["kind"]))
-        if stored.get("category"):
-            params.append(("category", category_param(stored["category"])))
-        params.append(("range", "30d"))
-        params.append(("pattern", p["id"]))
-        cards.append(dict(p, href="?" + urlencode(params)))
+    for r in rows:
+        if r["n"] < 2:
+            continue
+        kind, comp, slug = r["kind"], r["competitor__name"], r["competitor__slug"]
+        icon, tone = _PATTERN_META.get(kind, ("activity", "text-info"))
+        label = _KIND_LABEL.get(kind, "changes")
+        params = urlencode([("competitor", slug or ""), ("type", kind), ("range", "7d")])
+        cards.append(
+            {
+                "id": f"{slug}-{kind}",
+                "title": f"{r['n']} {label} at {comp}",
+                "competitor": comp,
+                "stat": str(r["n"]),
+                "stat_detail": "in the last 7 days",
+                "meta": "",
+                "cta": "View changes",
+                "icon": icon,
+                "tone": tone,
+                "href": "?" + params,
+            }
+        )
+        if len(cards) >= limit:
+            break
     return cards
 
 
@@ -352,16 +383,43 @@ def activity_tab(request):
     return key if key in {k for k, _ in ACTIVITY_TABS} else "all"
 
 
-def activity_payload(tab):
+# activity series key → the ChangeEvent types it aggregates.
+_ACTIVITY_TYPES = {
+    "price": [ChangeEvent.Type.PRICE_DECREASE, ChangeEvent.Type.PRICE_INCREASE],
+    "stock": [ChangeEvent.Type.STOCK_IN, ChangeEvent.Type.STOCK_OUT],
+    "product": [ChangeEvent.Type.PRODUCT_NEW, ChangeEvent.Type.PRODUCT_REMOVED],
+    "promotions": [ChangeEvent.Type.PROMOTION_STARTED, ChangeEvent.Type.PROMOTION_ENDED],
+}
+
+
+def activity_payload(request, tab):
+    """Change-activity line chart derived from real ChangeEvents (last 7 days)."""
+    from datetime import timedelta
+
+    from django.db.models import Count
+    from django.db.models.functions import TruncDate
+
+    since = timezone.now() - timedelta(days=7)
+    events = _events_qs(request).filter(detected_at__gte=since)
+    by_day_type = {}
+    for row in (
+        events.annotate(d=TruncDate("detected_at"))
+        .values("d", "event_type")
+        .annotate(n=Count("id"))
+    ):
+        by_day_type.setdefault(row["d"], {})[row["event_type"]] = row["n"]
+    days = sorted(by_day_type)
+    labels = [f"{d:%b} {d.day}" for d in days]
+
+    def _series(key):
+        types = _ACTIVITY_TYPES[key]
+        return [sum(by_day_type.get(d, {}).get(t, 0) for t in types) for d in days]
+
     return {
         "type": "line",
-        "labels": [row["time"] for row in CHANGE_ACTIVITY],
+        "labels": labels,
         "series": [
-            {
-                "label": label,
-                "data": [row[key] for row in CHANGE_ACTIVITY],
-                "color": color,
-            }
+            {"label": label, "data": _series(key), "color": color}
             for key, label, color in ACTIVITY_SERIES
             if tab == "all" or key == tab
         ],
@@ -369,12 +427,19 @@ def activity_payload(tab):
     }
 
 
-def competitor_payload():
+def competitor_payload(request):
+    """Most-active competitors (real ChangeEvent counts)."""
+    from django.db.models import Count
+
+    rows = (
+        _events_qs(request)
+        .values("competitor__name")
+        .annotate(n=Count("id"))
+        .order_by("-n")[:8]
+    )
     return {
         "type": "hbar",
-        "labels": [c["name"] for c in COMPETITOR_ACTIVITY],
-        "series": [
-            {"data": [c["changes"] for c in COMPETITOR_ACTIVITY], "color": "chart-1"}
-        ],
+        "labels": [r["competitor__name"] for r in rows],
+        "series": [{"data": [r["n"] for r in rows], "color": "chart-1"}],
         "options": {"labels": True, "barSize": 18, "labelWidth": 132},
     }

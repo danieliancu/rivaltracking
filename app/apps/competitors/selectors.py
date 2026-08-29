@@ -11,7 +11,6 @@ from apps.core.entities import slugify
 from apps.core.format import relative_time
 
 from . import filters
-from .data import ACTIVITY_EVENTS
 from .models import Competitor
 
 
@@ -129,21 +128,38 @@ def _activity_route(slug, kind):
     return "/changes/"
 
 
-def activity_feed(request):
-    """Recent-activity feed (presentational headlines), limited to the
-    workspace's own competitors so empty workspaces stay empty."""
-    known = {name: slug for name, slug in _queryset(request).values_list("name", "slug")}
+# Map a ChangeEvent kind → an activity-feed kind (icon/tone bucket).
+_CHANGE_TO_ACTIVITY = {
+    "drop": "prices-down",
+    "increase": "prices-down",
+    "new": "new-products",
+    "oos": "out-of-stock",
+    "removed": "out-of-stock",
+    "back": "new-products",
+    "promo": "promotion",
+    "promo-end": "promotion",
+}
+
+
+def activity_feed(request, limit=6):
+    """Recent-activity feed derived from real ChangeEvents (empty when none)."""
+    from apps.changes import selectors as change_selectors
+
+    slugs = {name: slug for name, slug in _queryset(request).values_list("name", "slug")}
     feed = []
-    for e in ACTIVITY_EVENTS:
-        if e["company"] not in known:
-            continue
-        meta = ACTIVITY_META.get(e["kind"], ACTIVITY_META["prices-down"])
+    for e in change_selectors.all_events(request)[:limit]:
+        akind = _CHANGE_TO_ACTIVITY.get(e["kind"], "new-products")
+        meta = ACTIVITY_META.get(akind, ACTIVITY_META["prices-down"])
+        product = e["product"]["name"]
         feed.append(
             {
-                **e,
+                "company": e["competitor"],
+                "event": f"{e['label']}{(' · ' + product) if product else ''}",
+                "time": e["detected"],
+                "kind": akind,
                 "icon": meta["icon"],
                 "tone": meta["tone"],
-                "href": _activity_route(known[e["company"]], e["kind"]),
+                "href": _activity_route(slugs.get(e["competitor"], ""), akind),
             }
         )
     return feed

@@ -22,14 +22,14 @@ def _recent_context(request, params):
     return selectors.recent_context(request, params.get("rule") or None)
 
 
-def _activity_context(params):
+def _activity_context(request, params):
     range_key = params.get("activity_range") or "7d"
     if range_key not in selectors.ACTIVITY_DATA_KEY:
         range_key = "7d"
     return {
         "activity_range": range_key,
         "activity_ranges": selectors.ACTIVITY_RANGES,
-        "activity_chart": selectors.activity_payload(range_key),
+        "activity_chart": selectors.activity_payload(request, range_key),
     }
 
 
@@ -38,9 +38,9 @@ def index(request):
         "kpis": selectors.kpi_cards(request),
         **_rules_context(request, request.GET),
         **_recent_context(request, request.GET),
-        **_activity_context(request.GET),
-        "most_triggered_chart": selectors.most_triggered_payload(),
-        "coverage": selectors.coverage_items(),
+        **_activity_context(request, request.GET),
+        "most_triggered_chart": selectors.most_triggered_payload(request),
+        "coverage": selectors.coverage_items(request),
     }
 
     htmx = getattr(request, "htmx", None)

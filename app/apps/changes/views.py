@@ -29,8 +29,8 @@ def index(request):
         "activity_tab": tab,
         "activity_tabs": selectors.ACTIVITY_TABS,
         "charts": {
-            "activity": selectors.activity_payload(tab),
-            "competitors": selectors.competitor_payload(),
+            "activity": selectors.activity_payload(request, tab),
+            "competitors": selectors.competitor_payload(request),
         },
     }
     htmx = getattr(request, "htmx", None)

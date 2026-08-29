@@ -14,14 +14,11 @@ from apps.products import selectors as product_selectors
 from .models import Alert, AlertRule
 
 from .data import (
-    ALERT_ACTIVITY,
-    ALERT_COVERAGE,
     ALERT_FILTER_OPTIONS,
     ALERT_FORM_OPTIONS,
     ALERT_KPIS,
     ALERT_TRIGGER_GROUPS,
     KIND_TO_TRIGGER,
-    MOST_TRIGGERED_RULES,
     TYPE_GROUP_META,
 )
 
@@ -257,41 +254,83 @@ def drawer_context(request, alert):
 # Charts
 
 
-def activity_payload(range_key):
-    points = ALERT_ACTIVITY[ACTIVITY_DATA_KEY.get(range_key, "7D")]
-    series = [
-        ("price", "Price", "chart-1"),
-        ("stock", "Stock", "warning"),
-        ("product", "Products", "chart-2"),
-        ("promotions", "Promotions", "purple"),
-    ]
+_ACTIVITY_RANGE_DAYS = {"today": 1, "7d": 7, "30d": 30}
+_EVENT_GROUP_TO_SERIES = {"price": "price", "stock": "stock", "products": "product", "promotions": "promotions"}
+_ALERT_ACTIVITY_SERIES = [
+    ("price", "Price", "chart-1"),
+    ("stock", "Stock", "warning"),
+    ("product", "Products", "chart-2"),
+    ("promotions", "Promotions", "purple"),
+]
+
+
+def activity_payload(request, range_key):
+    """Alert-activity line chart derived from real Alerts (by day, by type)."""
+    from datetime import timedelta
+
+    from apps.alerts.engine import EVENT_TYPE_GROUP
+
+    days_back = _ACTIVITY_RANGE_DAYS.get(range_key, 7)
+    since = timezone.now() - timedelta(days=days_back)
+    alerts = (
+        Alert.objects.for_workspace(_workspace(request))
+        .filter(triggered_at__gte=since)
+        .select_related("change_event")
+    )
+    by_day = {}
+    for a in alerts:
+        day = timezone.localtime(a.triggered_at).date()
+        group = EVENT_TYPE_GROUP.get(a.change_event.event_type) if a.change_event else None
+        skey = _EVENT_GROUP_TO_SERIES.get(group)
+        if skey is None:
+            continue
+        by_day.setdefault(day, {})[skey] = by_day.setdefault(day, {}).get(skey, 0) + 1
+    days = sorted(by_day)
     return {
         "type": "line",
-        "labels": [p["label"] for p in points],
+        "labels": [f"{d:%b} {d.day}" for d in days],
         "series": [
-            {"label": label, "data": [p[key] for p in points], "color": color}
-            for key, label, color in series
+            {"label": label, "data": [by_day.get(d, {}).get(key, 0) for d in days], "color": color}
+            for key, label, color in _ALERT_ACTIVITY_SERIES
         ],
         "options": {},
     }
 
 
-def most_triggered_payload():
+def most_triggered_payload(request):
+    """Most-triggered rules by real Alert count."""
+    from django.db.models import Count
+
+    rows = (
+        Alert.objects.for_workspace(_workspace(request))
+        .filter(rule__isnull=False)
+        .values("rule__name")
+        .annotate(n=Count("id"))
+        .order_by("-n")[:8]
+    )
     return {
         "type": "hbar",
-        "labels": [r["name"] for r in MOST_TRIGGERED_RULES],
-        "series": [{"data": [r["count"] for r in MOST_TRIGGERED_RULES], "color": "chart-1"}],
+        "labels": [r["rule__name"] for r in rows],
+        "series": [{"data": [r["n"] for r in rows], "color": "chart-1"}],
         "options": {"labels": True, "barSize": 14, "labelWidth": 140},
     }
 
 
-def coverage_items():
-    icons = ["bell", "boxes", "folder-search", "triangle-alert"]
-    tones = ["text-info", "text-teal", "text-purple", "text-warning"]
-    return [
-        {**stat, "icon": icons[i], "tone": tones[i]}
-        for i, stat in enumerate(ALERT_COVERAGE)
+def coverage_items(request):
+    from apps.catalogue.models import Product
+
+    ws = _workspace(request)
+    rules = AlertRule.objects.for_workspace(ws)
+    categories = (
+        Product.objects.for_workspace(ws).exclude(category="").values("category").distinct().count()
+    )
+    stats = [
+        {"label": "Active rules", "value": str(rules.filter(enabled=True).count()), "icon": "bell", "tone": "text-info"},
+        {"label": "Competitors covered", "value": str(len(competitor_selectors.header_list(request))), "icon": "boxes", "tone": "text-teal"},
+        {"label": "Categories monitored", "value": str(categories), "icon": "folder-search", "tone": "text-purple"},
+        {"label": "High-priority rules", "value": str(rules.filter(priority="high").count()), "icon": "triangle-alert", "tone": "text-warning"},
     ]
+    return stats
 
 
 # ---------------------------------------------------------------------------
