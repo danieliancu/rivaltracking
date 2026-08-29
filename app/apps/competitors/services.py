@@ -63,15 +63,25 @@ def add_competitor(request, url):
 
 
 def run_scan(request, slug):
-    """Future: POST /api/competitors/:id/scan (Celery task).
+    """Create a real ScanJob and enqueue it (POST /api/competitors/:id/scan).
 
-    Deterministic placeholder: stamp the row as just scanned.
+    In eager mode (local/tests) the job runs inline, so the returned summary is
+    final; with real workers it returns the queued job and the UI reflects
+    progress via ScanJob.
     """
-    now = timezone.now()
-    Competitor.objects.for_workspace(_workspace(request)).filter(slug=slug).update(
-        last_scan_at=now, updated_at=now
-    )
-    return {"new_changes": 12}
+    from apps.scanning.models import ScanJob
+    from apps.scanning.services import enqueue_scan
+
+    competitor = Competitor.objects.for_workspace(_workspace(request)).filter(slug=slug).first()
+    if competitor is None:
+        return None
+    job = enqueue_scan(competitor, trigger=ScanJob.Trigger.MANUAL)
+    job.refresh_from_db()
+    return {
+        "new_changes": job.changes_detected,
+        "status": job.status,
+        "job_id": job.id,
+    }
 
 
 def set_status(request, slug, status):

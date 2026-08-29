@@ -151,14 +151,18 @@ def run_scan(request, slug):
         raise Http404
     name = row["name"]
     result = services.run_scan(request, slug)
-    toasts = [
-        {"variant": "info", "title": "Scan started", "description": f"Scanning {name}…"},
-        {
-            "variant": "success",
-            "title": "Scan complete",
-            "description": f"{result['new_changes']} new changes detected across {name}.",
-        },
-    ]
+    if result and result["status"] == "completed":
+        toasts = [
+            {
+                "variant": "success",
+                "title": "Scan complete",
+                "description": f"{result['new_changes']} new changes detected across {name}.",
+            }
+        ]
+    else:
+        toasts = [
+            {"variant": "info", "title": "Scan started", "description": f"Scanning {name}…"}
+        ]
     return _fragment_response(request, request.POST, toasts)
 
 

@@ -32,26 +32,35 @@ def set_range(request):
 
 @require_POST
 def run_scan(request):
-    """Header 'Run Scan'. Deterministic placeholder — scanning is Phase 3."""
-    from django.utils import timezone
-
+    """Header 'Run Scan' — enqueues real ScanJob(s) on the scraping queue."""
     from apps.competitors.models import Competitor
+    from apps.scanning.models import ScanJob
+    from apps.scanning.services import enqueue_scan
 
     name = request.POST.get("competitor", "All competitors")
-    changes = 6 if name == "All competitors" else 3
     qs = Competitor.objects.for_workspace(getattr(request, "workspace", None))
     if name != "All competitors":
         qs = qs.filter(name=name)
-    qs.update(last_scan_at=timezone.now())
-    return render(
-        request,
-        "partials/toast.html",
-        {
+
+    jobs = [enqueue_scan(c, trigger=ScanJob.Trigger.MANUAL) for c in qs]
+    for job in jobs:
+        job.refresh_from_db()
+
+    completed = [j for j in jobs if j.status == ScanJob.Status.COMPLETED]
+    if jobs and len(completed) == len(jobs):
+        changes = sum(j.changes_detected for j in completed)
+        toast = {
             "variant": "success",
             "title": "Scan complete",
             "description": f"{changes} new changes detected across {name}.",
-        },
-    )
+        }
+    else:
+        toast = {
+            "variant": "info",
+            "title": "Scan started",
+            "description": f"Scanning {name}…",
+        }
+    return render(request, "partials/toast.html", {**toast})
 
 
 @require_POST
