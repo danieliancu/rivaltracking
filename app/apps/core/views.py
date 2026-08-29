@@ -32,12 +32,17 @@ def set_range(request):
 
 @require_POST
 def run_scan(request):
-    """Mock competitor scan. Future: POST /api/competitors/:id/scan"""
+    """Header 'Run Scan'. Deterministic placeholder — scanning is Phase 3."""
+    from django.utils import timezone
+
+    from apps.competitors.models import Competitor
+
     name = request.POST.get("competitor", "All competitors")
-    store = MockStore(request)
-    # Deterministic mock outcome, mirroring scanToastMessage in format.ts.
     changes = 6 if name == "All competitors" else 3
-    store.mutate("competitors", lambda rows: _mark_scanned(rows, name))
+    qs = Competitor.objects.for_workspace(getattr(request, "workspace", None))
+    if name != "All competitors":
+        qs = qs.filter(name=name)
+    qs.update(last_scan_at=timezone.now())
     return render(
         request,
         "partials/toast.html",
@@ -47,13 +52,6 @@ def run_scan(request):
             "description": f"{changes} new changes detected across {name}.",
         },
     )
-
-
-def _mark_scanned(rows, name):
-    for row in rows:
-        if name in ("All competitors", row["name"]):
-            row["last_scan"] = "Just now"
-            row["last_scan_minutes"] = 0
 
 
 @require_POST

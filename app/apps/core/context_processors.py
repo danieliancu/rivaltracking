@@ -22,8 +22,10 @@ RANGES = [
 ]
 
 
-def _scan_context(request, store):
+def _scan_context(request):
     """Competitor-detail route wins, then the dashboard competitor selector."""
+    from apps.competitors import selectors as competitor_selectors
+
     match = request.resolver_match
     slug = None
     if match and match.namespace == "competitors" and match.url_name == "detail":
@@ -32,10 +34,7 @@ def _scan_context(request, store):
         slug = request.session["selected_competitor"]
     if not slug:
         return None
-    for row in store.get("competitors"):
-        if row["slug"] == slug:
-            return row["name"]
-    return None
+    return competitor_selectors.name_for(request, slug)
 
 
 def shell(request):
@@ -53,16 +52,16 @@ def shell(request):
         active = path == "/" if url == "/" else path.startswith(url)
         nav_items.append({"label": label, "icon": icon, "url": url, "active": active})
 
+    from apps.competitors import selectors as competitor_selectors
+
     store = MockStore(request)
     try:
         recent_alerts = store.get("recent_alerts")
         unread = sum(1 for a in recent_alerts if a["status"] == "new")
-        competitors = [
-            {"name": c["name"], "slug": c["slug"]} for c in store.get("competitors")
-        ]
-        scan_context = _scan_context(request, store)
     except ImportError:  # data modules land incrementally during the build
-        unread, competitors, scan_context = 0, [], None
+        unread = 0
+    competitors = competitor_selectors.header_list(request)
+    scan_context = _scan_context(request)
 
     return {
         "nav_items": nav_items,

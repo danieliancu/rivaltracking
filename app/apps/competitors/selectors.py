@@ -1,38 +1,91 @@
-"""Competitor reads over the mock store."""
+"""Competitor reads over the ORM (workspace-scoped).
+
+Selectors return the same dict shapes the Phase 1 templates consumed; the
+mapping from Competitor rows to those dicts lives in ``row_dict`` so views and
+templates are unchanged.
+"""
+from django.db.models import Sum
+from django.utils import timezone
+
 from apps.core.entities import slugify
-from apps.core.mock.store import MockStore
+from apps.core.format import relative_time
 
 from . import filters
-from .data import ACTIVITY_EVENTS, COMPETITOR_KPIS, MONITORING_HEALTH
+from .data import ACTIVITY_EVENTS
+from .models import Competitor
+
+
+def _workspace(request):
+    return getattr(request, "workspace", None)
+
+
+def _queryset(request):
+    return Competitor.objects.for_workspace(_workspace(request))
+
+
+def _minutes_since(dt, now):
+    if dt is None:
+        return None
+    return max(0, int((now - dt).total_seconds() // 60))
+
+
+def _scan_display(c, now):
+    if c.status == Competitor.Status.SCANNING:
+        return "Scanning now", 0
+    minutes = _minutes_since(c.last_scan_at, now)
+    if minutes is None:
+        return "Just now", 0
+    return relative_time(minutes), minutes
+
+
+def row_dict(c, now=None):
+    """Competitor row → the dict shape competitors-table.tsx expects."""
+    now = now or timezone.now()
+    label, minutes = _scan_display(c, now)
+    return {
+        "slug": c.slug,
+        "name": c.name,
+        "url": c.domain or c.website_url,
+        "market": c.market,
+        "products": c.products_count,
+        "changes_today": c.changes_today,
+        "price_drops": c.price_drops,
+        "price_increases": c.price_increases,
+        "stock_changes": c.stock_changes,
+        "last_scan": label,
+        "last_scan_minutes": minutes,
+        "status": c.status,
+        "added_at": c.added_at.isoformat(),
+        "note": c.note or None,
+    }
 
 
 def all_rows(request):
-    return MockStore(request).get("competitors")
+    now = timezone.now()
+    return [row_dict(c, now) for c in _queryset(request)]
 
 
 def by_slug(request, slug):
-    for row in all_rows(request):
-        if row["slug"] == slug:
-            return row
-    return None
+    c = _queryset(request).filter(slug=slug).first()
+    return row_dict(c) if c else None
 
 
 def name_for(request, slug):
-    row = by_slug(request, slug)
-    return row["name"] if row else None
+    return _queryset(request).filter(slug=slug).values_list("name", flat=True).first()
 
 
 def slug_for(request, name):
-    for row in all_rows(request):
-        if row["name"] == name:
-            return row["slug"]
-    return None
+    return _queryset(request).filter(name=name).values_list("slug", flat=True).first()
+
+
+def header_list(request):
+    """[{name, slug}] for the header Run-Scan picker."""
+    return list(_queryset(request).values("name", "slug"))
 
 
 # ---------------------------------------------------------------------------
-# Competitors index — pages/competitors.tsx view models
+# Competitors index — view models
 
-# competitors.tsx kpiIcons — id → lucide glyph.
 KPI_ICONS = {
     "competitors": "boxes",
     "products": "package",
@@ -41,10 +94,14 @@ KPI_ICONS = {
 }
 
 
-def kpi_cards():
+def kpi_cards(request):
+    qs = _queryset(request)
+    agg = qs.aggregate(products=Sum("products_count"), changes=Sum("changes_today"))
     return [
-        {"icon": KPI_ICONS.get(k["id"], "boxes"), "tone": k["tone"], "value": k["value"], "label": k["label"]}
-        for k in COMPETITOR_KPIS
+        {"icon": "boxes", "tone": "info", "value": f"{qs.count():,}", "label": "Monitored competitors"},
+        {"icon": "package", "tone": "info", "value": f"{agg['products'] or 0:,}", "label": "Products monitored"},
+        {"icon": "git-compare-arrows", "tone": "success", "value": f"{agg['changes'] or 0:,}", "label": "Changes today"},
+        {"icon": "triangle-alert", "tone": "warning", "value": f"{qs.filter(status=Competitor.Status.ATTENTION).count():,}", "label": "Attention required"},
     ]
 
 
@@ -58,9 +115,7 @@ ACTIVITY_META = {
 }
 
 
-def _activity_route(request, event):
-    slug = slug_for(request, event["company"]) or slugify(event["company"])
-    kind = event["kind"]
+def _activity_route(slug, kind):
     if kind == "prices-down":
         return f"/changes/?type=price-decrease&competitor={slug}"
     if kind == "new-products":
@@ -75,29 +130,49 @@ def _activity_route(request, event):
 
 
 def activity_feed(request):
-    """ACTIVITY_EVENTS decorated with icon/tone + the per-kind deep link."""
+    """Recent-activity feed (presentational headlines), limited to the
+    workspace's own competitors so empty workspaces stay empty."""
+    known = {name: slug for name, slug in _queryset(request).values_list("name", "slug")}
     feed = []
     for e in ACTIVITY_EVENTS:
+        if e["company"] not in known:
+            continue
         meta = ACTIVITY_META.get(e["kind"], ACTIVITY_META["prices-down"])
-        feed.append({**e, "icon": meta["icon"], "tone": meta["tone"], "href": _activity_route(request, e)})
+        feed.append(
+            {
+                **e,
+                "icon": meta["icon"],
+                "tone": meta["tone"],
+                "href": _activity_route(known[e["company"]], e["kind"]),
+            }
+        )
     return feed
 
 
-# monitoring-health.tsx stats + two-segment bar.
-def monitoring_health():
-    h = MONITORING_HEALTH
-    total = h["healthy"] + h["attention"]
-    healthy_share = (h["healthy"] / total) * 100 if total else 0
+def monitoring_health(request):
+    qs = _queryset(request)
+    now = timezone.now()
+    healthy = qs.filter(status=Competitor.Status.HEALTHY).count()
+    attention = qs.filter(status=Competitor.Status.ATTENTION).count()
+    total = qs.count()
+    last_scan = qs.exclude(last_scan_at=None).order_by("-last_scan_at").values_list("last_scan_at", flat=True).first()
+    next_scan = qs.exclude(next_scan_at=None).order_by("next_scan_at").values_list("next_scan_at", flat=True).first()
+    last_label = relative_time(_minutes_since(last_scan, now)) if last_scan else "—"
+    if next_scan:
+        mins = max(0, int((next_scan - now).total_seconds() // 60))
+        next_label = f"in {mins} minutes" if mins < 120 else f"in {mins // 60} hours"
+    else:
+        next_label = "—"
+    healthy_share = (healthy / total) * 100 if total else 0
     stats = [
-        {"icon": "check-circle-2", "icon_class": "mt-0.5 size-4 shrink-0 text-success", "value": f"{h['healthy']} competitors", "label": "Healthy"},
-        {"icon": "triangle-alert", "icon_class": "mt-0.5 size-4 shrink-0 text-warning", "value": f"{h['attention']} competitor", "label": "Needs attention"},
-        {"icon": "clock-3", "icon_class": "mt-0.5 size-4 shrink-0 text-info", "value": h["last_successful_scan"], "label": "Last successful scan"},
-        {"icon": "calendar-clock", "icon_class": "mt-0.5 size-4 shrink-0 text-purple", "value": h["next_scheduled_scan"], "label": "Next scheduled scan"},
+        {"icon": "check-circle-2", "icon_class": "mt-0.5 size-4 shrink-0 text-success", "value": f"{healthy} competitors", "label": "Healthy"},
+        {"icon": "triangle-alert", "icon_class": "mt-0.5 size-4 shrink-0 text-warning", "value": f"{attention} competitor", "label": "Needs attention"},
+        {"icon": "clock-3", "icon_class": "mt-0.5 size-4 shrink-0 text-info", "value": last_label, "label": "Last successful scan"},
+        {"icon": "calendar-clock", "icon_class": "mt-0.5 size-4 shrink-0 text-purple", "value": next_label, "label": "Next scheduled scan"},
     ]
-    return {"stats": stats, "total": total, "healthy": h["healthy"], "healthy_share": healthy_share}
+    return {"stats": stats, "total": total, "healthy": healthy, "healthy_share": healthy_share}
 
 
-# "Competitors you may be missing" — 3 non-dismissed discovery candidates.
 def discovery_suggestions(request, limit=3):
     from apps.discovery import selectors as discovery_selectors
 
@@ -108,10 +183,9 @@ def discovery_suggestions(request, limit=3):
 
 
 # ---------------------------------------------------------------------------
-# Monitored Competitors table fragment — competitors-table.tsx
+# Monitored Competitors table fragment
 
 def _num(value):
-    """competitors-table.tsx num(): thousands-separated or an em dash."""
     return "—" if value is None else f"{value:,}"
 
 

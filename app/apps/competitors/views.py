@@ -79,9 +79,9 @@ def index(request):
         **state,
         "table_url": reverse("competitors:index"),
         "toasts": [],
-        "kpis": selectors.kpi_cards(),
+        "kpis": selectors.kpi_cards(request),
         "activity": selectors.activity_feed(request),
-        "health": selectors.monitoring_health(),
+        "health": selectors.monitoring_health(request),
         "suggestions": selectors.discovery_suggestions(request),
         "ask_ai_href": reverse("ai:index")
         + "?"
