@@ -1,7 +1,7 @@
 """Alert mutations against the mock store (alerts-store.tsx semantics)."""
 from datetime import date
 
-from apps.core.mock.store import MockStore
+from apps.core.store import WorkspaceStore
 
 from .data import ALERT_FORM_OPTIONS
 from .selectors import TRIGGER_OPTIONS
@@ -80,7 +80,7 @@ def _build_rule(fields):
 
 def create_rule(request, post):
     """Future: POST /api/alerts/rules"""
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     fields = _form_fields(post)
     rule = _build_rule(fields)
     rule.update(
@@ -100,7 +100,7 @@ def create_rule(request, post):
 
 def update_rule(request, rule_id, post):
     """Future: PATCH /api/alerts/rules/:id"""
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     existing = next((r for r in store.get("alert_rules") if r["id"] == rule_id), None)
     if existing is None:
         return None
@@ -129,7 +129,7 @@ def toggle_rule(request, rule_id):
 
     Returns the rule as it was BEFORE the flip (the toast copy depends on it).
     """
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     before = next((r for r in store.get("alert_rules") if r["id"] == rule_id), None)
     if before is None:
         return None
@@ -146,7 +146,7 @@ def toggle_rule(request, rule_id):
 
 def duplicate_rule(request, rule_id):
     """Future: POST /api/alerts/rules/:id/duplicate"""
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     rules = store.get("alert_rules")
     source = next((r for r in rules if r["id"] == rule_id), None)
     if source is None:
@@ -173,7 +173,7 @@ def delete_rule(request, rule_id):
 
     Alerts already triggered by the rule are kept (recent_alerts untouched).
     """
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     name = next(
         (r["name"] for r in store.get("alert_rules") if r["id"] == rule_id), None
     )
@@ -193,7 +193,7 @@ def mark_read(request, alert_id):
             if a["id"] == alert_id:
                 a["status"] = "viewed"
 
-    MockStore(request).mutate("recent_alerts", _mark)
+    WorkspaceStore(request).mutate("recent_alerts", _mark)
 
 
 def mark_all_read(request):
@@ -203,4 +203,4 @@ def mark_all_read(request):
         for a in alerts:
             a["status"] = "viewed"
 
-    MockStore(request).mutate("recent_alerts", _mark)
+    WorkspaceStore(request).mutate("recent_alerts", _mark)

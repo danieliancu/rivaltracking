@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 from django.urls import reverse
 
-from apps.core.mock.store import MockStore
+from apps.core.store import WorkspaceStore
 
 from .data import (
     GENERATION_STAGES,
@@ -52,7 +52,7 @@ def report_type(type_id):
 
 
 def all_reports(request):
-    return MockStore(request).get("reports")
+    return WorkspaceStore(request).get("reports")
 
 
 def by_id(request, report_id):
@@ -60,7 +60,7 @@ def by_id(request, report_id):
 
 
 def all_schedules(request):
-    return MockStore(request).get("report_schedules")
+    return WorkspaceStore(request).get("report_schedules")
 
 
 def schedule_by_id(request, schedule_id):

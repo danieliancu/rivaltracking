@@ -4,14 +4,15 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
-from apps.core.mock.store import MockStore
+from apps.competitors import selectors as competitor_selectors
+from apps.core.store import WorkspaceStore
 
 from . import selectors, services
 from .data import ACTIVITY_SUGGESTIONS, SUGGESTED_QUESTIONS
 
 
 def _base_context(request):
-    return {"conversations": MockStore(request).get("conversations")}
+    return {"conversations": WorkspaceStore(request).get("conversations")}
 
 
 def index(request):
@@ -42,7 +43,7 @@ def index(request):
         "seed_prompt": seed_prompt,
         "suggested_questions": SUGGESTED_QUESTIONS,
         "activity_suggestions": ACTIVITY_SUGGESTIONS,
-        "competitor_options": [c["name"] for c in MockStore(request).get("competitors")],
+        "competitor_options": [c["name"] for c in competitor_selectors.header_list(request)],
         "period_options": selectors.PERIOD_OPTIONS,
         "category_options": selectors.CATEGORY_OPTIONS,
     }

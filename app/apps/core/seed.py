@@ -287,6 +287,30 @@ def _seed_own_products(workspace, products, now):
         )
 
 
+def _seed_team(workspace):
+    """Add a couple of teammates (besides the owner) for a realistic team page.
+
+    Users are reused across workspaces via get_or_create — a user may belong to
+    many workspaces — so seeding multiple workspaces never collides on email.
+    """
+    from apps.accounts.models import User, WorkspaceMembership
+    from apps.settings_app.data import TEAM_MEMBERS
+
+    role_for = {1: WorkspaceMembership.Role.ADMIN}
+    for idx, member in enumerate(TEAM_MEMBERS[1:], start=1):
+        user = User.objects.filter(email__iexact=member["email"]).first()
+        if user is None:
+            first, _, last = member["name"].partition(" ")
+            user = User.objects.create_user(
+                email=member["email"], password=None, first_name=first, last_name=last
+            )
+        WorkspaceMembership.objects.get_or_create(
+            user=user,
+            workspace=workspace,
+            defaults={"role": role_for.get(idx, WorkspaceMembership.Role.MEMBER)},
+        )
+
+
 def seed_workspace(workspace, *, now=None):
     """Populate a workspace with the full demo dataset (idempotent)."""
     now = now or timezone.now()
@@ -296,4 +320,5 @@ def seed_workspace(workspace, *, now=None):
     _seed_history(workspace, primary_listing, now)
     _seed_change_events(workspace, competitors, products, primary_listing, now)
     _seed_own_products(workspace, products, now)
+    _seed_team(workspace)
     return workspace

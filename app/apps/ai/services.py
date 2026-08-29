@@ -8,7 +8,7 @@ import re
 from copy import deepcopy
 from functools import lru_cache
 
-from apps.core.mock.store import MockStore
+from apps.core.store import WorkspaceStore
 
 from .data import CANDIDATE_RESPONSE_TEMPLATE, FALLBACK_RESPONSE, RESPONSES
 
@@ -91,7 +91,7 @@ def create_conversation(request, question):
     prepended to the history. `when` is "Just now".
     """
     title = f"{question[:48]}…" if len(question) > 48 else question
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     conversation = {
         "id": _unique_conversation_id(store.get("conversations")),
         "title": title,
@@ -106,7 +106,7 @@ def rename_conversation(request, conversation_id, title):
     title = (title or "").strip()
     if not title:
         return None
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     found = {"c": None}
 
     def _rename(items):
@@ -121,7 +121,7 @@ def rename_conversation(request, conversation_id, title):
 
 def delete_conversation(request, conversation_id):
     """Future: DELETE /api/ai/conversations/:id"""
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     name = next(
         (c["title"] for c in store.get("conversations") if c["id"] == conversation_id),
         None,

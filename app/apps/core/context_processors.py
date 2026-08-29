@@ -1,7 +1,7 @@
 """Context shared by the application shell (sidebar + header) on every page."""
 from django.urls import reverse
 
-from apps.core.mock.store import MockStore
+from apps.core.store import WorkspaceStore
 
 NAV = [
     ("Overview", "layout-dashboard", "dashboard:overview"),
@@ -54,11 +54,11 @@ def shell(request):
 
     from apps.competitors import selectors as competitor_selectors
 
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     try:
         recent_alerts = store.get("recent_alerts")
         unread = sum(1 for a in recent_alerts if a["status"] == "new")
-    except ImportError:  # data modules land incrementally during the build
+    except (ImportError, KeyError):  # data modules land incrementally during the build
         unread = 0
     competitors = competitor_selectors.header_list(request)
     scan_context = _scan_context(request)

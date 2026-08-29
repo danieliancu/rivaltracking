@@ -89,10 +89,10 @@ def team_invite(request):
         return render(
             request,
             "settings_app/partials/invite_dialog.html",
-            {"roles": selectors.ASSIGNABLE_ROLES, "email": "", "role": "Analyst"},
+            {"roles": selectors.ASSIGNABLE_ROLES, "email": "", "role": "Member"},
         )
     email = request.POST.get("email", "").strip()
-    role = request.POST.get("role", "Analyst")
+    role = request.POST.get("role", "Member")
     if not services.EMAIL_RE.match(email):
         return render(
             request,

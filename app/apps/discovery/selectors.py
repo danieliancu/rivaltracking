@@ -1,5 +1,5 @@
 """Discovery reads over the mock store."""
-from apps.core.mock.store import MockStore
+from apps.core.store import WorkspaceStore
 
 from .data import DISCOVERY_CLUSTERS
 
@@ -24,14 +24,14 @@ TOYWORLD_PROFILE = {
 def visible_candidates(request, cluster=None, limit=None):
     rows = [
         c
-        for c in MockStore(request).get("discovery_candidates")
+        for c in WorkspaceStore(request).get("discovery_candidates")
         if c["status"] != "dismissed" and (not cluster or c["cluster"] == cluster)
     ]
     return rows[:limit] if limit else rows
 
 
 def by_slug(request, slug):
-    for c in MockStore(request).get("discovery_candidates"):
+    for c in WorkspaceStore(request).get("discovery_candidates"):
         if c["slug"] == slug:
             return c
     return None
@@ -45,7 +45,7 @@ def cluster_cards(request, active_cluster=None):
     """Cluster filter cards with live non-dismissed counts (discovery.tsx)."""
     candidates = [
         c
-        for c in MockStore(request).get("discovery_candidates")
+        for c in WorkspaceStore(request).get("discovery_candidates")
         if c["status"] != "dismissed"
     ]
     return [

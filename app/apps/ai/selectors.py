@@ -183,9 +183,9 @@ def build_ai_message(response):
 
 
 def conversation_by_id(request, conversation_id):
-    from apps.core.mock.store import MockStore
+    from apps.core.store import WorkspaceStore
 
-    for c in MockStore(request).get("conversations"):
+    for c in WorkspaceStore(request).get("conversations"):
         if c["id"] == conversation_id:
             return c
     return None

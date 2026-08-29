@@ -2,8 +2,8 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_GET, require_POST
 
-from apps.core.mock.store import MockStore
 from apps.core.search import global_search
+from apps.core.store import WorkspaceStore
 
 
 @require_GET
@@ -66,8 +66,12 @@ def sign_out(request):
 
 @require_POST
 def reset_demo(request):
-    """Drop the session's mock-data copy, restoring the seed dataset."""
-    MockStore(request).reset()
+    """Restore the seed dataset for the current workspace (ORM + demo state)."""
+    from apps.core.seed import seed_workspace
+
+    if getattr(request, "workspace", None) is not None:
+        seed_workspace(request.workspace)
+        WorkspaceStore(request).reset()
     request.session.pop("date_range", None)
     request.session.pop("selected_competitor", None)
     response = HttpResponse(status=204)

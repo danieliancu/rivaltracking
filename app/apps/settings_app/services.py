@@ -1,7 +1,8 @@
-"""Settings mutations against the mock store."""
+"""Settings mutations against the Workspace/WorkspaceSettings/Membership models."""
 import re
 
-from apps.core.mock.store import MockStore
+from apps.accounts.models import User, WorkspaceMembership
+from apps.competitors.models import Competitor
 
 WEBSITE_RE = re.compile(r"^https?://.+\..+")
 EMAIL_RE = re.compile(r".+@.+\..+")
@@ -9,6 +10,18 @@ EMAIL_RE = re.compile(r".+@.+\..+")
 WORKSPACE_FIELDS = [
     "name", "website", "market", "industry", "currency", "timezone", "date_format",
 ]
+
+# UI role label → membership role enum.
+ROLE_LABEL_TO_ENUM = {
+    "Admin": WorkspaceMembership.Role.ADMIN,
+    "Member": WorkspaceMembership.Role.MEMBER,
+}
+
+JSON_SECTIONS = {"monitoring", "notifications", "ai", "reports"}
+
+
+def _settings(request):
+    return request.workspace.settings
 
 
 def _set_path(target, path, value):
@@ -19,26 +32,38 @@ def _set_path(target, path, value):
 
 
 def save_section(request, section, values):
-    """Future: PATCH /api/settings/:section
+    """Partial update of one settings section.
 
-    Partial update: `values` maps (dotted) field paths to new values.
-    Section "data" writes top-level settings keys (retention).
+    Future: PATCH /api/settings/:section
     """
+    ws = request.workspace
+    s = _settings(request)
 
-    def _apply(settings):
-        target = settings if section == "data" else settings.setdefault(section, {})
+    if section == "workspace":
+        ws.name = values.get("name", ws.name)
+        ws.save(update_fields=["name", "updated_at"])
+        for field in WORKSPACE_FIELDS[1:]:
+            setattr(s, field, values.get(field, getattr(s, field)))
+        s.save()
+        return
+
+    if section == "data":
         for path, value in values.items():
-            _set_path(target, path, value)
+            if path == "retention":
+                s.retention = value
+        s.save(update_fields=["retention", "updated_at"])
+        return
 
-    MockStore(request).mutate("settings", _apply)
+    if section in JSON_SECTIONS:
+        payload = getattr(s, section) or {}
+        for path, value in values.items():
+            _set_path(payload, path, value)
+        setattr(s, section, payload)
+        s.save(update_fields=[section, "updated_at"])
 
 
 def parse_autosave_post(request, section):
-    """Turn an auto-saved control's POST into a partial-update values dict.
-
-    Toggle rows post `field=<dotted path>` plus the checkbox pair only when
-    checked; selects/inputs post plain name=value pairs.
-    """
+    """Turn an auto-saved control's POST into a partial-update values dict."""
     post = request.POST
     if "field" in post:
         path = post["field"]
@@ -49,7 +74,7 @@ def parse_autosave_post(request, section):
             continue
         value = post[key]
         if section == "monitoring" and key == "ignore_threshold":
-            value = re.sub(r"\D", "", value)  # monitoring-section.tsx replace(/\D/g, "")
+            value = re.sub(r"\D", "", value)
         values[key] = value
     return values
 
@@ -68,45 +93,45 @@ def parse_workspace_post(request):
 
 
 def invite_member(request, email, role):
-    """Future: POST /api/team/invitations"""
-    member = {
-        "id": f"m-{email}",
-        "name": email.split("@")[0],
-        "email": email,
-        "role": role,
-        "status": "Invited",
-        "last_active": "—",
+    """Future: POST /api/team/invitations. Creates the user + membership."""
+    user = User.objects.filter(email__iexact=email).first()
+    if user is None:
+        user = User.objects.create_user(email=email, password=None)
+    membership, _ = WorkspaceMembership.objects.get_or_create(
+        user=user,
+        workspace=request.workspace,
+        defaults={"role": ROLE_LABEL_TO_ENUM.get(role, WorkspaceMembership.Role.MEMBER)},
+    )
+    return {
+        "id": str(membership.id),
+        "name": user.display_name,
+        "email": user.email,
+        "role": membership.get_role_display(),
     }
 
-    def _append(settings):
-        settings["team"].append(member)
 
-    MockStore(request).mutate("settings", _append)
-    return member
+def _membership(request, member_id):
+    try:
+        return request.workspace.memberships.select_related("user").get(id=member_id)
+    except (WorkspaceMembership.DoesNotExist, ValueError, TypeError):
+        return None
 
 
 def change_role(request, member_id, role):
-    """Future: PATCH /api/team/:id"""
-    changed = None
-
-    def _change(settings):
-        nonlocal changed
-        for m in settings["team"]:
-            if m["id"] == member_id:
-                m["role"] = role
-                changed = m
-
-    MockStore(request).mutate("settings", _change)
-    return changed
+    """Future: PATCH /api/team/:id. Owners are never demoted here."""
+    membership = _membership(request, member_id)
+    if membership is None or membership.is_owner:
+        return None
+    membership.role = ROLE_LABEL_TO_ENUM.get(role, membership.role)
+    membership.save(update_fields=["role"])
+    return {"name": membership.user.display_name}
 
 
 def remove_member(request, member_id):
-    """Future: DELETE /api/team/:id"""
-
-    def _remove(settings):
-        settings["team"] = [m for m in settings["team"] if m["id"] != member_id]
-
-    MockStore(request).mutate("settings", _remove)
+    """Future: DELETE /api/team/:id. Owners cannot be removed."""
+    membership = _membership(request, member_id)
+    if membership is not None and not membership.is_owner:
+        membership.delete()
 
 
 # ---------------------------------------------------------------------------
@@ -114,23 +139,22 @@ def remove_member(request, member_id):
 
 
 def delete_competitor_data(request, name):
-    """Future: DELETE /api/data/competitors/:slug
+    """Future: DELETE /api/data/competitors/:slug.
 
-    Removes the competitor's products, change events and competitor row.
+    Deleting the Competitor cascades its listings, snapshots, promotions and
+    change events; canonical products remain.
     """
-    store = MockStore(request)
-    store.replace(
-        "products", [p for p in store.get("products") if p["competitor"] != name]
-    )
-    store.replace(
-        "change_events",
-        [e for e in store.get("change_events") if e["competitor"] != name],
-    )
-    store.replace(
-        "competitors", [c for c in store.get("competitors") if c["name"] != name]
-    )
+    Competitor.objects.for_workspace(request.workspace).filter(name=name).delete()
 
 
 def delete_workspace(request):
-    """Future: DELETE /api/workspace — resets the demo workspace."""
-    MockStore(request).reset()
+    """Future: DELETE /api/workspace.
+
+    Demo affordance: rebuild the workspace's seed data rather than destroying
+    the tenant (which would sign the user out mid-demo).
+    """
+    from apps.core.seed import seed_workspace
+    from apps.core.store import WorkspaceStore
+
+    seed_workspace(request.workspace)
+    WorkspaceStore(request).reset()

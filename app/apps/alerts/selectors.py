@@ -5,8 +5,10 @@ import json
 import sys
 from django.utils.safestring import mark_safe
 
+from apps.competitors import selectors as competitor_selectors
 from apps.core.entities import slugify
-from apps.core.mock.store import MockStore
+from apps.core.store import WorkspaceStore
+from apps.products import selectors as product_selectors
 
 from .data import (
     ALERT_ACTIVITY,
@@ -83,7 +85,7 @@ def kpi_cards():
 
 
 def all_rules(request):
-    return MockStore(request).get("alert_rules")
+    return WorkspaceStore(request).get("alert_rules")
 
 
 def rule_by_id(request, rule_id):
@@ -141,7 +143,7 @@ def with_meta(rules):
 
 
 def competitor_filter_options(request):
-    names = [c["name"] for c in MockStore(request).get("competitors")]
+    names = [c["name"] for c in competitor_selectors.header_list(request)]
     return ["All competitors", *names]
 
 
@@ -150,7 +152,7 @@ def competitor_filter_options(request):
 
 
 def all_recent(request):
-    return MockStore(request).get("recent_alerts")
+    return WorkspaceStore(request).get("recent_alerts")
 
 
 def alert_by_id(request, alert_id):
@@ -177,13 +179,9 @@ def recent_context(request, rule_param):
 
 def drawer_context(request, alert):
     """alert-detail-drawer.tsx derived values."""
-    store = MockStore(request)
     product = None
     if alert.get("product_slug"):
-        product = next(
-            (p for p in store.get("products") if p["slug"] == alert["product_slug"]),
-            None,
-        )
+        product = product_selectors.by_slug(request, alert["product_slug"])
     return {
         "alert": alert,
         "source_url": product.get("source_url") if product else None,

@@ -5,7 +5,7 @@ Each function notes the future backend endpoint it stands in for
 """
 import time
 
-from apps.core.mock.store import MockStore
+from apps.core.store import WorkspaceStore
 
 
 def _base36(value):
@@ -25,7 +25,7 @@ def create_report(request, *, type_id, type_title, competitors, period,
     id "{typeId}-{Date.now base36}", name "{type} — {period}", created
     "Just now", status "ready", data through "26 Aug, 14:42"; prepended.
     """
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     report_id = f"{type_id}-{_base36(int(time.time() * 1000))}"
     existing = {r["id"] for r in store.get("reports")}
     while report_id in existing:  # same-millisecond regenerate clicks
@@ -50,7 +50,7 @@ def create_report(request, *, type_id, type_title, competitors, period,
 
 def delete_report(request, report_id):
     """Future: DELETE /api/reports/:id"""
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     store.replace("reports", [r for r in store.get("reports") if r["id"] != report_id])
 
 
@@ -69,7 +69,7 @@ def save_schedule(request, schedule):
                 return
         rows.append(schedule)
 
-    MockStore(request).mutate("report_schedules", _save)
+    WorkspaceStore(request).mutate("report_schedules", _save)
     return schedule
 
 
@@ -83,13 +83,13 @@ def toggle_schedule(request, schedule_id):
                 s["active"] = not s["active"]
                 toggled.update(s)
 
-    MockStore(request).mutate("report_schedules", _toggle)
+    WorkspaceStore(request).mutate("report_schedules", _toggle)
     return toggled or None
 
 
 def delete_schedule(request, schedule_id):
     """Future: DELETE /api/report-schedules/:id"""
-    store = MockStore(request)
+    store = WorkspaceStore(request)
     store.replace(
         "report_schedules",
         [s for s in store.get("report_schedules") if s["id"] != schedule_id],

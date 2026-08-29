@@ -34,7 +34,7 @@ def default_settings_payload(name):
         "notifications": dict(s.NOTIFICATION_SETTINGS),
         "ai": dict(s.AI_SETTINGS),
         "reports": dict(s.REPORT_SETTINGS),
-        "retention": {"competitor_data": "12 months", "reports": "24 months"},
+        "retention": s.DATA_SETTINGS["retention"],
     }
 
 

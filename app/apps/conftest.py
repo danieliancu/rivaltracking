@@ -29,7 +29,7 @@ def workspace(db):
     user, ws = register_account(
         email="owner@demo.test",
         password="owner-pass-12345",
-        first_name="Dani",
+        first_name="Daniel",
         last_name="Iancu",
         workspace_name="Acme Toys Ltd",
     )

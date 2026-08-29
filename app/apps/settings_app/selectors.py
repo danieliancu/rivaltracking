@@ -1,55 +1,100 @@
-"""Settings reads over the mock store (port of settings sections' derived state)."""
+"""Settings reads over the real Workspace/WorkspaceSettings/Membership models.
+
+`settings_state` rebuilds the nested settings dict the Phase 1 templates
+consumed from the workspace's profile columns, the JSON toggle sections and the
+membership table, so the section partials are unchanged.
+"""
 from django.utils import timezone
 
-from apps.core.mock.store import MockStore
+from apps.changes import selectors as change_selectors
+from apps.competitors import selectors as competitor_selectors
+from apps.products import selectors as product_selectors
 
 from . import data
 
 SECTION_IDS = [s["id"] for s in data.SETTINGS_SECTIONS]
 
-ASSIGNABLE_ROLES = ["Admin", "Analyst", "Viewer"]
+# Roles a manager can assign (Owner is not assignable). Maps the UI label to
+# the WorkspaceMembership.Role enum.
+ASSIGNABLE_ROLES = ["Admin", "Member"]
+
+
+def _settings(request):
+    return request.workspace.settings
 
 
 def settings_state(request):
-    """The full settings dict, with the top-level retention default applied."""
-    stored = MockStore(request).get("settings")
-    state = dict(stored)
-    state.setdefault("retention", data.DATA_SETTINGS["retention"])
-    return state
+    """The full settings dict the section partials expect."""
+    ws = request.workspace
+    s = _settings(request)
+    return {
+        "workspace": {
+            "name": ws.name,
+            "website": s.website,
+            "market": s.market,
+            "industry": s.industry,
+            "currency": s.currency,
+            "timezone": s.timezone,
+            "date_format": s.date_format,
+        },
+        "monitoring": s.monitoring or dict(data.MONITORING_SETTINGS),
+        "notifications": s.notifications or dict(data.NOTIFICATION_SETTINGS),
+        "ai": s.ai or dict(data.AI_SETTINGS),
+        "reports": s.reports or dict(data.REPORT_SETTINGS),
+        "team": _team_members(request),
+        "retention": s.retention or data.DATA_SETTINGS["retention"],
+    }
 
 
 def _labelled_toggles(values, labels):
-    return [
-        {"key": key, "label": labels[key], "checked": on}
-        for key, on in values.items()
-    ]
+    return [{"key": key, "label": labels[key], "checked": on} for key, on in values.items()]
 
 
 def initials(name):
-    """team-section.tsx avatar: first letters of the first two name/dot parts."""
     parts = [p for p in name.replace(".", " ").split() if p]
     return "".join(p[0].upper() for p in parts[:2])
 
 
+def _last_active(user):
+    if user.last_login:
+        minutes = max(0, int((timezone.now() - user.last_login).total_seconds() // 60))
+        from apps.core.format import relative_time
+
+        return relative_time(minutes)
+    return "—"
+
+
+def _team_members(request):
+    rows = []
+    for m in request.workspace.memberships.select_related("user").order_by("created_at"):
+        user = m.user
+        rows.append(
+            {
+                "id": str(m.id),
+                "name": user.display_name,
+                "email": user.email,
+                "role": m.get_role_display(),
+                "status": "Active",
+                "last_active": _last_active(user),
+                "is_owner": m.is_owner,
+            }
+        )
+    return rows
+
+
 def team_rows(request):
-    return [
-        {**m, "initials": initials(m["name"])}
-        for m in settings_state(request)["team"]
-    ]
+    return [{**m, "initials": initials(m["name"])} for m in _team_members(request)]
 
 
 def member_by_id(request, member_id):
     for m in team_rows(request):
-        if m["id"] == member_id:
+        if m["id"] == str(member_id):
             return m
     return None
 
 
 def competitor_names(request):
-    """data-section.tsx: live competitor names, falling back to the seed list."""
-    from apps.competitors.selectors import all_rows
-
-    names = [c["name"] for c in all_rows(request)]
+    names = [c["name"] for c in competitor_selectors.header_list(request)]
     return names if names else list(data.DATA_SETTINGS["competitors"])
 
 
@@ -61,13 +106,12 @@ def billing_usage():
 
 
 def export_snapshot(request):
-    """workspace-store.tsx exportWorkspaceSnapshot — portable workspace JSON."""
-    store = MockStore(request)
+    """Portable workspace JSON, now assembled from the ORM."""
     return {
         "exported_at": timezone.now().isoformat(),
         "workspace": settings_state(request)["workspace"],
-        "competitors": store.get("competitors"),
-        "products": store.get("products"),
+        "competitors": competitor_selectors.all_rows(request),
+        "products": product_selectors.all_rows(request),
         "change_events": [
             {
                 **{k: v for k, v in e.items() if k != "product"},
@@ -77,11 +121,9 @@ def export_snapshot(request):
                     "sku": e["product"]["sku"],
                 },
             }
-            for e in store.get("change_events")
+            for e in change_selectors.all_events(request)
         ],
-        "reports": store.get("reports"),
-        "report_schedules": store.get("report_schedules"),
-        "watchlist": list(store.get("watchlist")),
+        "watchlist": list(product_selectors.watchlist(request)),
     }
 
 
@@ -122,13 +164,7 @@ def section_context(request, section):
             r=state["reports"],
             detail_options=data.REPORT_DETAIL_OPTIONS,
             period_options=["Today", "Last 7 days", "Last 30 days"],
-            competitor_options=[
-                "All monitored competitors",
-                "ToyWorld.co.uk",
-                "PlayNest.co.uk",
-                "HappyToyHouse.com",
-                "LittleMindsToys.co.uk",
-            ],
+            competitor_options=["All monitored competitors", *competitor_names(request)],
             daily_time_options=["06:00", "08:00", "12:00"],
             weekly_day_options=["Monday", "Friday"],
             weekly_time_options=["06:00", "08:00", "16:00"],

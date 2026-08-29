@@ -4,8 +4,6 @@ import json
 import pytest
 from django.urls import reverse
 
-from apps.core.mock.store import SESSION_KEY
-
 pytestmark = pytest.mark.django_db
 
 SECTION_IDS = [
@@ -70,7 +68,7 @@ def test_unknown_section_falls_back_to_workspace(client):
 # ---------------------------------------------------------------------------
 # Mutations
 
-def test_save_workspace(client):
+def test_save_workspace(client, workspace):
     response = client.post(
         reverse("settings_app:save", kwargs={"section": "workspace"}),
         {
@@ -85,7 +83,8 @@ def test_save_workspace(client):
     )
     assert response.status_code == 200
     assert "Settings saved" in response.content.decode()
-    assert client.session[SESSION_KEY]["settings"]["workspace"]["name"] == "Renamed Ltd"
+    workspace.refresh_from_db()
+    assert workspace.name == "Renamed Ltd"
 
 
 def test_team_invite_dialog_get(client):
@@ -94,36 +93,42 @@ def test_team_invite_dialog_get(client):
     assert "Invite member" in response.content.decode()
 
 
-def test_team_invite_valid_email(client):
+def test_team_invite_valid_email(client, workspace):
+    from apps.accounts.models import WorkspaceMembership
+
     response = client.post(
         reverse("settings_app:team_invite"),
-        {"email": "new@acmetoys.co.uk", "role": "Analyst"},
+        {"email": "new@acmetoys.co.uk", "role": "Member"},
     )
     html = response.content.decode()
     assert response.status_code == 200
     assert "Invitation sent" in html
-    team = client.session[SESSION_KEY]["settings"]["team"]
-    assert any(m["email"] == "new@acmetoys.co.uk" and m["status"] == "Invited" for m in team)
+    assert WorkspaceMembership.objects.filter(
+        workspace=workspace, user__email="new@acmetoys.co.uk"
+    ).exists()
 
 
 def test_team_invite_invalid_email(client):
     response = client.post(
-        reverse("settings_app:team_invite"), {"email": "not-an-email", "role": "Analyst"}
+        reverse("settings_app:team_invite"), {"email": "not-an-email", "role": "Member"}
     )
     html = response.content.decode()
     assert response.status_code == 200
     assert "Enter a valid email" in html
 
 
-def test_data_delete_competitor(client):
+def test_data_delete_competitor(client, workspace):
+    from apps.competitors.models import Competitor
+
     response = client.post(
         reverse("settings_app:data_delete_competitor"), {"competitor": "ToyWorld.co.uk"}
     )
     html = response.content.decode()
     assert response.status_code == 200
     assert "Competitor data deleted" in html
-    names = [c["name"] for c in client.session[SESSION_KEY]["competitors"]]
-    assert "ToyWorld.co.uk" not in names
+    assert not Competitor.objects.filter(
+        workspace=workspace, name="ToyWorld.co.uk"
+    ).exists()
 
 
 def test_data_delete_workspace_redirects(client):
