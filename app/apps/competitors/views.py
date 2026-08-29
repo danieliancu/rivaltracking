@@ -64,7 +64,12 @@ def _is_fragment(request):
 
 def _fragment_response(request, params, toasts=None):
     state = selectors.table_state(request, params)
-    context = {**state, "table_url": reverse("competitors:index"), "toasts": toasts or []}
+    context = {
+        **state,
+        "table_url": reverse("competitors:index"),
+        "toasts": toasts or [],
+        "kpis": selectors.kpi_cards(request),
+    }
     response = render(request, "competitors/partials/table.html", context)
     push_url = reverse("competitors:index")
     if state["canonical_qs"]:

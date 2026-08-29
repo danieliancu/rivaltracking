@@ -1,0 +1,7 @@
+{% load ui %}{% comment %} Competitor KPI cards. Re-rendered out-of-band on every table
+   mutation (add / scan / remove / pause) so the headline numbers update live
+   alongside the table. {% endcomment %}
+<section id="competitors-kpis" {% if oob %}hx-swap-oob="true"{% endif %}
+         class="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
+  {% for k in kpis %}{% kpi_card k.icon k.tone k.value k.label %}{% endfor %}
+</section>

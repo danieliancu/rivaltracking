@@ -16,9 +16,7 @@
   </button>
 </section>
 
-<section class="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
-  {% for k in kpis %}{% kpi_card k.icon k.tone k.value k.label %}{% endfor %}
-</section>
+{% include "competitors/partials/kpis.html" %}
 
 {% include "components/ai_insight_card.html" with title="Portfolio Intelligence" cta_label="View full analysis" cta_href=ask_ai_href body_template="competitors/partials/portfolio_body.html" %}
 
