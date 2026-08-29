@@ -1,9 +1,11 @@
-"""Discovery reads over the mock store."""
-from apps.core.store import WorkspaceStore
+"""Discovery reads over the DiscoveryCandidate model.
 
+candidate_dict rebuilds the Phase 1 candidate dict the templates consume so the
+Discovery UI is unchanged.
+"""
 from .data import DISCOVERY_CLUSTERS
+from .models import DiscoveryCandidate
 
-# Candidate tone → identity tile classes (company-discovery-row.tsx).
 DISCOVERY_TONES = {
     "blue": "bg-info/10 text-info",
     "purple": "bg-purple/10 text-purple",
@@ -11,8 +13,6 @@ DISCOVERY_TONES = {
     "orange": "bg-warning/10 text-warning",
 }
 
-# Catalogue profile of the monitored reference competitor — hard-coded in
-# compare-catalogue-drawer.tsx. Comparison uses current catalogue data only.
 TOYWORLD_PROFILE = {
     "name": "ToyWorld.co.uk",
     "products": "2,438",
@@ -21,20 +21,40 @@ TOYWORLD_PROFILE = {
 }
 
 
+def _workspace(request):
+    return getattr(request, "workspace", None)
+
+
+def candidate_dict(obj):
+    return {
+        "id": obj.slug,
+        "slug": obj.slug,
+        "name": obj.name,
+        "url": obj.domain or obj.website_url,
+        "match": obj.score,
+        "tone": obj.tone or "blue",
+        "cluster": obj.cluster,
+        "status": obj.status,
+        "why_match": obj.reasons or [],
+        "catalogue_profile": obj.catalogue_profile or {},
+    }
+
+
+def _queryset(request):
+    return DiscoveryCandidate.objects.for_workspace(_workspace(request))
+
+
 def visible_candidates(request, cluster=None, limit=None):
-    rows = [
-        c
-        for c in WorkspaceStore(request).get("discovery_candidates")
-        if c["status"] != "dismissed" and (not cluster or c["cluster"] == cluster)
-    ]
-    return rows[:limit] if limit else rows
+    qs = _queryset(request).exclude(status=DiscoveryCandidate.Status.DISMISSED)
+    if cluster:
+        qs = qs.filter(cluster=cluster)
+    rows = [candidate_dict(c) for c in (qs[:limit] if limit else qs)]
+    return rows
 
 
 def by_slug(request, slug):
-    for c in WorkspaceStore(request).get("discovery_candidates"):
-        if c["slug"] == slug:
-            return c
-    return None
+    obj = _queryset(request).filter(slug=slug).first()
+    return candidate_dict(obj) if obj else None
 
 
 def tone_class(candidate):
@@ -42,17 +62,15 @@ def tone_class(candidate):
 
 
 def cluster_cards(request, active_cluster=None):
-    """Cluster filter cards with live non-dismissed counts (discovery.tsx)."""
-    candidates = [
-        c
-        for c in WorkspaceStore(request).get("discovery_candidates")
-        if c["status"] != "dismissed"
-    ]
+    candidates = _queryset(request).exclude(status=DiscoveryCandidate.Status.DISMISSED)
+    counts = {}
+    for cl in candidates.values_list("cluster", flat=True):
+        counts[cl] = counts.get(cl, 0) + 1
     return [
         {
             "id": c["id"],
             "label": c["label"],
-            "count": sum(1 for x in candidates if x["cluster"] == c["id"]),
+            "count": counts.get(c["id"], 0),
             "active": active_cluster == c["id"],
         }
         for c in DISCOVERY_CLUSTERS

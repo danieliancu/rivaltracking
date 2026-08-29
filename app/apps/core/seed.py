@@ -311,6 +311,28 @@ def _seed_team(workspace):
         )
 
 
+def _seed_discovery(workspace):
+    """Seed discovery candidates verbatim (preserves the Discovery UI values)."""
+    from apps.discovery.data import DISCOVERY_CANDIDATES_SEED
+    from apps.discovery.models import DiscoveryCandidate
+
+    DiscoveryCandidate.objects.filter(workspace=workspace).delete()
+    for c in DISCOVERY_CANDIDATES_SEED:
+        DiscoveryCandidate.objects.create(
+            workspace=workspace,
+            name=c["name"],
+            slug=c["slug"],
+            domain=c["url"],
+            website_url=f"https://{c['url']}",
+            score=c["match"],
+            tone=c.get("tone", "blue"),
+            cluster=c.get("cluster", ""),
+            status=c.get("status", "suggested"),
+            reasons=c.get("why_match", []),
+            catalogue_profile=c.get("catalogue_profile", {}),
+        )
+
+
 def seed_workspace(workspace, *, now=None):
     """Populate a workspace with the full demo dataset (idempotent)."""
     now = now or timezone.now()
@@ -321,4 +343,5 @@ def seed_workspace(workspace, *, now=None):
     _seed_change_events(workspace, competitors, products, primary_listing, now)
     _seed_own_products(workspace, products, now)
     _seed_team(workspace)
+    _seed_discovery(workspace)
     return workspace
