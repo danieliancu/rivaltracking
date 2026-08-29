@@ -67,3 +67,5 @@ CACHES = {
     }
 }
 CELERY_TASK_ALWAYS_EAGER = env("CELERY_TASK_ALWAYS_EAGER", default="0") not in ("0", "false", "False")
+
+SCANNING_LIVE = env("SCANNING_LIVE", default="1") not in ("0", "false", "False")

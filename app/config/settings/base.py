@@ -201,3 +201,7 @@ AI_PROVIDER = env("AI_PROVIDER", default="stub")
 AI_MODEL = env("AI_MODEL", default="gpt-4o-mini")
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 AI_MAX_ANALYSES_PER_SCAN = int(env("AI_MAX_ANALYSES_PER_SCAN", default="30"))
+
+# Live scanning hits real competitor sites; off locally/in tests (inject a
+# fetcher instead), on in production/demo.
+SCANNING_LIVE = env("SCANNING_LIVE", default="0") in ("1", "true", "True")

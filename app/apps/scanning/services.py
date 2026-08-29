@@ -2,6 +2,7 @@
 fetch/extract/normalise/persist pipeline is wired in the next commit)."""
 from datetime import timedelta
 
+from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
@@ -83,9 +84,15 @@ def enqueue_scan(competitor, *, trigger=ScanJob.Trigger.MANUAL):
     return job
 
 
-def execute_scan_job(job_id):
-    """Run one ScanJob. The real scraping pipeline is added in the next commit;
-    for now this records a clean run and advances the competitor's scan clock."""
+def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
+    """Run one ScanJob through the scraping orchestrator.
+
+    Live scanning (settings.SCANNING_LIVE) hits real sites; tests inject a fake
+    ``fetcher`` to drive the pipeline offline. With neither, this records a clean
+    no-op run (so eager local Run Scan never touches the network).
+    ``persist_hook`` turns scraped items into listings/snapshots/changes
+    (wired in the next commit).
+    """
     job = ScanJob.objects.select_related("competitor", "workspace").filter(id=job_id).first()
     if job is None or job.status not in (ScanJob.Status.QUEUED, ScanJob.Status.RUNNING):
         return None
@@ -97,14 +104,30 @@ def execute_scan_job(job_id):
 
     competitor = job.competitor
     try:
-        # --- pipeline goes here (next commit) ---
-        summary = {"products_found": 0, "products_updated": 0, "changes_detected": 0, "pages_requested": 0}
-        job.products_found = summary["products_found"]
-        job.products_updated = summary["products_updated"]
-        job.changes_detected = summary["changes_detected"]
-        job.pages_requested = summary["pages_requested"]
-        job.status = ScanJob.Status.COMPLETED
-    except Exception as exc:  # pragma: no cover - defensive; real handling next commit
+        if fetcher is not None or settings.SCANNING_LIVE:
+            from .scraping.orchestration import run_competitor_scan
+
+            outcome = run_competitor_scan(
+                competitor,
+                fetcher=fetcher,
+                job=job,
+                throttle=fetcher is None,
+                persist_hook=persist_hook,
+            )
+            job.products_found = outcome.products_found
+            job.pages_requested = outcome.pages_requested
+            job.errors_count = outcome.errors
+            job.error_summary = "\n".join(outcome.error_messages[:20])
+            job.status = (
+                ScanJob.Status.PARTIALLY_FAILED
+                if outcome.errors and outcome.products_found
+                else ScanJob.Status.FAILED
+                if outcome.errors and not outcome.products_found
+                else ScanJob.Status.COMPLETED
+            )
+        else:
+            job.status = ScanJob.Status.COMPLETED
+    except Exception as exc:  # defensive: a scan failure never breaks other work
         job.status = ScanJob.Status.FAILED
         job.errors_count += 1
         job.error_summary = str(exc)[:2000]
