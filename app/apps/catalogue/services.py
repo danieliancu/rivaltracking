@@ -81,3 +81,18 @@ def record_snapshots(listing, *, now=None):
     record_price_snapshot(listing, now=now)
     record_stock_snapshot(listing, now=now)
     sync_promotion(listing, now=now)
+
+
+def unique_product_slug(workspace, name):
+    """A canonical-product slug unique within a workspace."""
+    from apps.core.entities import slugify
+
+    from .models import Product
+
+    base = slugify(name) or "product"
+    slug = base
+    i = 2
+    while Product.objects.filter(workspace=workspace, slug=slug).exists():
+        slug = f"{base}-{i}"
+        i += 1
+    return slug

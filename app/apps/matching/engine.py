@@ -127,3 +127,53 @@ def match_competitor(competitor):
         match_listing(listing)
         count += 1
     return count
+
+
+def match_own_product(own_product):
+    """Link an OwnProduct to a canonical Product (create one if none matches).
+
+    Same deterministic hierarchy as competitor matching. Ensures own products
+    and competitor listings converge on one canonical Product so price-position
+    comparison works.
+    """
+    from apps.catalogue.models import Product
+    from apps.catalogue.services import unique_product_slug
+    from apps.core.entities import competitor_tone
+
+    ws = own_product.workspace
+    candidates = Product.objects.for_workspace(ws)
+    hit = None
+    if own_product.gtin:
+        hit = candidates.filter(gtin=own_product.gtin).first()
+    if hit is None and own_product.mpn and own_product.brand:
+        hit = candidates.filter(mpn=own_product.mpn, brand__iexact=own_product.brand).first()
+    if hit is None and own_product.own_sku:
+        hit = candidates.filter(sku__iexact=own_product.own_sku).first()
+    if hit is None and own_product.name:
+        best, best_score = None, 0.0
+        for candidate in candidates.only("id", "name"):
+            score = fuzz.token_sort_ratio(own_product.name, candidate.name)
+            if score > best_score:
+                best, best_score = candidate, score
+        if best is not None and best_score >= AUTO_THRESHOLD:
+            hit = best
+
+    if hit is None:
+        hit = Product.objects.create(
+            workspace=ws,
+            name=own_product.name,
+            slug=unique_product_slug(ws, own_product.name),
+            brand=own_product.brand,
+            sku=own_product.own_sku,
+            gtin=own_product.gtin,
+            ean=own_product.ean,
+            mpn=own_product.mpn,
+            category=own_product.category,
+            image_url=own_product.image_url,
+            tone=competitor_tone(own_product.name or "own"),
+            icon="package",
+        )
+
+    own_product.product = hit
+    own_product.save(update_fields=["product", "updated_at"])
+    return hit

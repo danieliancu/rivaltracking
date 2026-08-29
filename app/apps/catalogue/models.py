@@ -158,6 +158,12 @@ class OwnProduct(models.Model):
     )
     name = models.CharField(max_length=200)
     own_sku = models.CharField(max_length=80)
+    brand = models.CharField(max_length=120, blank=True)
+    gtin = models.CharField(max_length=14, blank=True)
+    ean = models.CharField(max_length=14, blank=True)
+    mpn = models.CharField(max_length=80, blank=True)
+    category = models.CharField(max_length=120, blank=True)
+    image_url = models.CharField(max_length=300, blank=True)
     cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     rrp = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     our_price = models.DecimalField(
@@ -165,6 +171,13 @@ class OwnProduct(models.Model):
     )
     currency = models.CharField(max_length=3, default="GBP")
     in_stock = models.BooleanField(default=True)
+    source = models.ForeignKey(
+        "catalogue.OwnCatalogueSource",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="products",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -286,3 +299,56 @@ class Promotion(models.Model):
 
     def __str__(self):
         return self.title or f"Promotion on {self.listing}"
+
+
+class OwnCatalogueSource(models.Model):
+    """The customer's own catalogue connection (website crawl / CSV / API).
+
+    Distinct from a Competitor: this is the user's own store. Website imports
+    reuse the scraping pipeline but write OwnProduct/OwnListing, never
+    Competitor/ProductListing.
+    """
+
+    class SourceType(models.TextChoices):
+        WEBSITE = "website", "Website"
+        CSV = "csv", "CSV"
+        API = "api", "API"
+
+    class Status(models.TextChoices):
+        NOT_CONNECTED = "not_connected", "Not connected"
+        IMPORTING = "importing", "Importing"
+        CONNECTED = "connected", "Connected"
+        PARTIAL = "partial", "Partially imported"
+        FAILED = "failed", "Failed"
+
+    workspace = models.ForeignKey(
+        "accounts.Workspace", on_delete=models.CASCADE, related_name="catalogue_sources"
+    )
+    source_type = models.CharField(
+        max_length=20, choices=SourceType.choices, default=SourceType.WEBSITE
+    )
+    website_url = models.CharField(max_length=500, blank=True)
+    domain = models.CharField(max_length=255, blank=True)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.NOT_CONNECTED
+    )
+    last_import_at = models.DateTimeField(null=True, blank=True)
+    products_found = models.PositiveIntegerField(default=0)
+    errors_count = models.PositiveIntegerField(default=0)
+    error_summary = models.TextField(blank=True)
+    config = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = WorkspaceManager()
+
+    class Meta:
+        ordering = ["source_type"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workspace", "source_type"], name="unique_source_type_per_workspace"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.get_source_type_display()} source for {self.workspace}"

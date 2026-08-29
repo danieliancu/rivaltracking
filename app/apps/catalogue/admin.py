@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    OwnCatalogueSource,
     OwnListing,
     OwnProduct,
     PriceSnapshot,
@@ -73,3 +74,10 @@ class OwnProductAdmin(admin.ModelAdmin):
     list_select_related = ["workspace", "product"]
     autocomplete_fields = ["workspace", "product"]
     inlines = [OwnListingInline]
+
+
+@admin.register(OwnCatalogueSource)
+class OwnCatalogueSourceAdmin(admin.ModelAdmin):
+    list_display = ["workspace", "source_type", "status", "website_url", "products_found", "last_import_at"]
+    list_filter = ["source_type", "status", "workspace"]
+    list_select_related = ["workspace"]
