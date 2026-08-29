@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
 from apps.changes import selectors as change_selectors
-from apps.core.mock.store import MockStore
+from apps.competitors import selectors as competitor_selectors
 from apps.discovery import selectors as discovery_selectors
 
 from . import selectors
@@ -10,7 +10,9 @@ from . import selectors
 
 def _context(request):
     range_key = request.session.get("date_range", "30d")
-    data = selectors.dataset(range_key)
+    if range_key not in selectors.RANGE_LABELS:
+        range_key = "30d"
+    data = selectors.build_dataset(request, range_key)
     competitor = selectors.selected_competitor(request)
     competitor_name = competitor["name"] if competitor else "your competitors"
     return {
@@ -20,7 +22,7 @@ def _context(request):
         "range_label": selectors.RANGE_LABELS[range_key],
         "range_labels": selectors.RANGE_LABELS,
         "competitor": competitor,
-        "competitors": MockStore(request).get("competitors"),
+        "competitors": competitor_selectors.all_rows(request),
         "recent_events": change_selectors.recent_for_competitor(request, competitor_name),
         "suggestions": [
             {"d": d, "tone_class": discovery_selectors.tone_class(d)}

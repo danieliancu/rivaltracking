@@ -1,10 +1,18 @@
-"""Change-event reads over the mock store, plus Changes-page view models."""
+"""Change-event reads over the ORM, plus Changes-page view models.
+
+``event_dict`` rebuilds the exact Phase 1 change-event dict from a ChangeEvent
+row (competitor/product joined, display strings from metadata) so the events
+table, detail drawer and the product/competitor detail tabs are unchanged. The
+pure filter/sort helpers in filters.py then run over those dicts.
+"""
 from urllib.parse import urlencode
+
+from django.utils import timezone
 
 from apps.alerts.data import KIND_TO_TRIGGER
 from apps.competitors import selectors as competitor_selectors
 from apps.core.entities import category_param, slugify
-from apps.core.mock.store import MockStore
+from apps.core.format import relative_time
 from apps.core.selectors import paginate, to_int
 
 from . import filters
@@ -17,33 +25,87 @@ from .data import (
     COMPETITOR_ACTIVITY,
     SAVED_VIEWS,
 )
+from .models import ChangeEvent
+
+
+def _workspace(request):
+    return getattr(request, "workspace", None)
+
+
+def _minutes_since(dt, now):
+    if dt is None:
+        return None
+    return max(0, int((now - dt).total_seconds() // 60))
+
+
+def event_dict(event, now=None):
+    """ChangeEvent row → the Phase 1 change-event dict."""
+    now = now or timezone.now()
+    product = event.product
+    meta = event.metadata or {}
+    minutes = _minutes_since(event.detected_at, now)
+    source_url = meta.get("source_url") or (event.listing.source_url if event.listing else "")
+    return {
+        "id": event.id,
+        "type": event.event_type.upper(),
+        "kind": event.kind,
+        "label": event.label,
+        "product": {
+            "slug": product.slug if product else "",
+            "name": product.name if product else "",
+            "sku": product.sku if product else "",
+            "tone": product.tone if product else "",
+            "icon": product.icon if product else "package",
+        },
+        "competitor": event.competitor.name,
+        "category": product.category if product else "",
+        "previous": event.previous_value,
+        "current": event.new_value,
+        "secondary": event.secondary or None,
+        "secondary_tone": event.secondary_tone or None,
+        "impact": event.impact,
+        "detected": relative_time(minutes),
+        "detected_minutes": minutes if minutes is not None else 0,
+        "source_url": source_url,
+        "detected_at": meta.get("detected_at", ""),
+        "first_seen_at": meta.get("first_seen_at", ""),
+        "last_confirmed_at": meta.get("last_confirmed_at", ""),
+        "last_scanned": meta.get("last_scanned", ""),
+        "difference": event.difference or None,
+        "evidence": meta.get("evidence", {}),
+        "ai_note": meta.get("ai_note", ""),
+    }
+
+
+def _events_qs(request):
+    return (
+        ChangeEvent.objects.for_workspace(_workspace(request))
+        .select_related("competitor", "product", "listing")
+    )
 
 
 def all_events(request):
-    return MockStore(request).get("change_events")
+    now = timezone.now()
+    return [event_dict(e, now) for e in _events_qs(request)]
 
 
 def by_id(request, event_id):
-    for event in all_events(request):
-        if event["id"] == event_id:
-            return event
-    return None
+    event = _events_qs(request).filter(id=event_id).first()
+    return event_dict(event) if event else None
 
 
 def recent_for_competitor(request, competitor_name, kinds=None, limit=5):
     """dashboard/changes-table.tsx: latest events for one competitor."""
-    rows = [
-        e
-        for e in all_events(request)
-        if e["competitor"] == competitor_name and (not kinds or e["kind"] in kinds)
-    ]
-    return rows[:limit]
+    now = timezone.now()
+    qs = _events_qs(request).filter(competitor__name=competitor_name)
+    if kinds:
+        qs = qs.filter(kind__in=list(kinds))
+    return [event_dict(e, now) for e in qs[:limit]]
 
 
 # ---------------------------------------------------------------------------
 # Changes page — pages/changes.tsx
 
-# changes.tsx kpiIcons: data icon key → lucide glyph.
 KPI_ICONS = {
     "activity": "activity",
     "down": "trending-down",
@@ -54,8 +116,21 @@ KPI_ICONS = {
 }
 
 
-def kpi_cards():
-    return [dict(k, icon=KPI_ICONS.get(k["icon"], "activity")) for k in CHANGE_KPIS]
+def kpi_cards(request):
+    qs = _events_qs(request)
+    T = ChangeEvent.Type
+    values = {
+        "today": qs.filter(detected_at__date=timezone.localdate()).count(),
+        "decreases": qs.filter(event_type=T.PRICE_DECREASE).count(),
+        "increases": qs.filter(event_type=T.PRICE_INCREASE).count(),
+        "stock": qs.filter(event_type__in=[T.STOCK_IN, T.STOCK_OUT]).count(),
+        "new": qs.filter(event_type=T.PRODUCT_NEW).count(),
+        "promos": qs.filter(event_type__in=[T.PROMOTION_STARTED, T.PROMOTION_ENDED]).count(),
+    }
+    return [
+        dict(k, icon=KPI_ICONS.get(k["icon"], "activity"), value=f"{values.get(k['id'], 0):,}")
+        for k in CHANGE_KPIS
+    ]
 
 
 def _slug_for(request, name):
@@ -114,12 +189,12 @@ def select_state(request, f, sort):
 def form_options(request):
     """Select options with URL-token values (CHANGE_FILTER_OPTIONS port)."""
     opts = CHANGE_FILTER_OPTIONS
+    competitors = [{"value": "", "label": opts["competitors"][0]}] + [
+        {"value": c["slug"], "label": c["name"]}
+        for c in competitor_selectors.header_list(request)
+    ]
     return {
-        "competitors": [{"value": "", "label": opts["competitors"][0]}]
-        + [
-            {"value": _slug_for(request, name), "label": name}
-            for name in opts["competitors"][1:]
-        ],
+        "competitors": competitors,
         "change_types": [{"value": "", "label": "All changes"}]
         + opts["change_type_groups"],
         "categories": [{"value": "", "label": opts["categories"][0]}]
@@ -183,7 +258,7 @@ def pattern_cards(request):
 
 
 # ---------------------------------------------------------------------------
-# Charts — changes/change-activity.tsx, changes/active-competitors.tsx
+# Charts — presentational analytics (headline series kept from the seed).
 
 ACTIVITY_SERIES = [
     ("price", "Price", "chart-1"),

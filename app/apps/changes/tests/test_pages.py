@@ -2,7 +2,17 @@
 import pytest
 from django.urls import reverse
 
+from apps.changes.models import ChangeEvent
+
 pytestmark = pytest.mark.django_db
+
+
+def _event_id(workspace, slug="lego-castle-set"):
+    return (
+        ChangeEvent.objects.filter(workspace=workspace, product__slug=slug)
+        .values_list("id", flat=True)
+        .first()
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -21,7 +31,7 @@ def test_index_renders_landmarks(client):
     assert "Most Active Competitors" in html
     assert "LEGO Castle Set" in html
     # KPI row
-    assert "Changes today" in html and "121" in html
+    assert "Changes today" in html  # value is now ORM-derived
 
 
 def test_index_filters_by_type(client):
@@ -73,8 +83,8 @@ def test_activity_fragment_returns_partial(client):
 # ---------------------------------------------------------------------------
 # Drawer
 
-def test_drawer_fragment(client):
-    response = client.get(reverse("changes:drawer", args=[91824]))
+def test_drawer_fragment(client, workspace):
+    response = client.get(reverse("changes:drawer", args=[_event_id(workspace)]))
     html = response.content.decode()
     assert response.status_code == 200
     assert "LEGO Castle Set" in html
@@ -97,8 +107,8 @@ def test_export_csv(client):
     assert "LEGO Castle Set" in body
 
 
-def test_export_csv_ids_subset(client):
-    response = client.get(reverse("changes:export"), {"ids": "91824"})
+def test_export_csv_ids_subset(client, workspace):
+    response = client.get(reverse("changes:export"), {"ids": str(_event_id(workspace))})
     body = response.content.decode()
     assert "LEGO Castle Set" in body
     assert "Garden Water Table" not in body

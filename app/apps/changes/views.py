@@ -17,7 +17,7 @@ def index(request):
     f, sort, page, pattern = selectors.parse_request(request)
     tab = selectors.activity_tab(request)
     context = {
-        "kpis": selectors.kpi_cards(),
+        "kpis": selectors.kpi_cards(request),
         "patterns": selectors.pattern_cards(request),
         "filters": f,
         "select_state": selectors.select_state(request, f, sort),
