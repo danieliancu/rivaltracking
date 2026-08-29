@@ -4,9 +4,15 @@ from django.urls import reverse
 
 pytestmark = pytest.mark.django_db
 
-# Real ids from ALERT_RULES / RECENT_ALERTS.
-RULE_ID = "toyworld-drops"
-ALERT_ID = 5531
+from apps.alerts.models import Alert, AlertRule
+
+
+def _rule_id(workspace, name="Large ToyWorld price drops"):
+    return str(AlertRule.objects.get(workspace=workspace, name=name).pk)
+
+
+def _alert_id(workspace):
+    return Alert.objects.filter(workspace=workspace, status="new").first().pk
 
 
 def test_index_renders(client):
@@ -46,8 +52,8 @@ def test_rule_dialog_create(client):
     assert "Email — coming later" in content
 
 
-def test_rule_dialog_edit(client):
-    response = client.get(reverse("alerts:rule_dialog"), {"rule": RULE_ID})
+def test_rule_dialog_edit(client, workspace):
+    response = client.get(reverse("alerts:rule_dialog"), {"rule": _rule_id(workspace)})
     content = response.content.decode()
     assert response.status_code == 200
     assert "Edit alert rule" in content
@@ -90,9 +96,9 @@ def test_create_rule(client):
     assert "Price decreases — ToyWorld.co.uk" in followup.content.decode()
 
 
-def test_update_rule(client):
+def test_update_rule(client, workspace):
     response = client.post(
-        reverse("alerts:update_rule", kwargs={"rule_id": RULE_ID}),
+        reverse("alerts:update_rule", kwargs={"rule_id": _rule_id(workspace)}),
         {
             "trigger": "price-decrease",
             "operator": "more than",
@@ -117,9 +123,9 @@ def test_update_rule_unknown_404(client):
     assert response.status_code == 404
 
 
-def test_toggle_rule(client):
+def test_toggle_rule(client, workspace):
     response = client.post(
-        reverse("alerts:toggle_rule", kwargs={"rule_id": RULE_ID})
+        reverse("alerts:toggle_rule", kwargs={"rule_id": _rule_id(workspace)})
     )
     content = response.content.decode()
     assert response.status_code == 200
@@ -128,9 +134,9 @@ def test_toggle_rule(client):
     assert "Large ToyWorld price drops" in content
 
 
-def test_duplicate_rule(client):
+def test_duplicate_rule(client, workspace):
     response = client.post(
-        reverse("alerts:duplicate_rule", kwargs={"rule_id": RULE_ID})
+        reverse("alerts:duplicate_rule", kwargs={"rule_id": _rule_id(workspace)})
     )
     content = response.content.decode()
     assert response.status_code == 200
@@ -138,9 +144,9 @@ def test_duplicate_rule(client):
     assert "Large ToyWorld price drops (copy)" in content
 
 
-def test_delete_rule(client):
+def test_delete_rule(client, workspace):
     response = client.post(
-        reverse("alerts:delete_rule", kwargs={"rule_id": RULE_ID})
+        reverse("alerts:delete_rule", kwargs={"rule_id": _rule_id(workspace)})
     )
     content = response.content.decode()
     assert response.status_code == 200
@@ -156,9 +162,9 @@ def test_delete_rule(client):
     assert "Large ToyWorld price drops" not in followup.content.decode()
 
 
-def test_mark_read_oob_badges(client):
+def test_mark_read_oob_badges(client, workspace):
     response = client.post(
-        reverse("alerts:mark_read", kwargs={"alert_id": ALERT_ID})
+        reverse("alerts:mark_read", kwargs={"alert_id": _alert_id(workspace)})
     )
     content = response.content.decode()
     assert response.status_code == 200
@@ -179,9 +185,9 @@ def test_mark_all_read(client):
     assert "disabled" in content
 
 
-def test_open_alert_drawer(client):
+def test_open_alert_drawer(client, workspace):
     response = client.post(
-        reverse("alerts:open_alert", kwargs={"alert_id": ALERT_ID})
+        reverse("alerts:open_alert", kwargs={"alert_id": _alert_id(workspace)})
     )
     content = response.content.decode()
     assert response.status_code == 200

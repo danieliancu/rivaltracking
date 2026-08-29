@@ -3,12 +3,15 @@ chart payloads and dialog form state (ports of alert-rules-table.tsx,
 recent-alerts-table.tsx, create-alert-dialog.tsx and alerts.tsx logic)."""
 import json
 import sys
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 
 from apps.competitors import selectors as competitor_selectors
 from apps.core.entities import slugify
-from apps.core.store import WorkspaceStore
+from apps.core.format import relative_time
 from apps.products import selectors as product_selectors
+
+from .models import Alert, AlertRule
 
 from .data import (
     ALERT_ACTIVITY,
@@ -68,12 +71,30 @@ ACTIVITY_DATA_KEY = {"today": "Today", "7d": "7D", "30d": "30D"}
 _JSON_ESCAPES = {ord(">"): "\\u003E", ord("<"): "\\u003C", ord("&"): "\\u0026"}
 
 
-def kpi_cards():
+def _workspace(request):
+    return getattr(request, "workspace", None)
+
+
+def _pk(value):
+    """Integer pk or None for non-numeric ids (so bad ids 404, not error)."""
+    return int(value) if str(value).isdigit() else None
+
+
+def kpi_cards(request):
+    ws = _workspace(request)
+    rules = AlertRule.objects.for_workspace(ws)
+    alerts = Alert.objects.for_workspace(ws)
+    values = {
+        "active": rules.filter(enabled=True).count(),
+        "triggered": alerts.filter(triggered_at__date=timezone.localdate()).count(),
+        "high": alerts.filter(payload__priority="high", status=Alert.Status.NEW).count(),
+        "covered": len(competitor_selectors.header_list(request)),
+    }
     return [
         {
             "icon": KPI_ICONS.get(k["id"], "bell"),
             "tone": k["tone"],
-            "value": k["value"],
+            "value": str(values.get(k["id"], k["value"])),
             "label": k["label"],
         }
         for k in ALERT_KPIS
@@ -84,15 +105,48 @@ def kpi_cards():
 # Alert rules
 
 
+def rule_dict(obj, now=None):
+    now = now or timezone.now()
+    cfg = obj.config or {}
+    if obj.last_triggered_at:
+        mins = max(0, int((now - obj.last_triggered_at).total_seconds() // 60))
+        last = relative_time(mins)
+    else:
+        mins, last = None, "Never"
+    d = {
+        "id": str(obj.pk),
+        "name": obj.name,
+        "type_group": obj.type_group,
+        "condition": obj.condition,
+        "competitors": obj.competitors,
+        "frequency": obj.frequency,
+        "active": obj.enabled,
+        "priority": obj.priority,
+        "created_at": obj.created_at.date().isoformat(),
+        "last_triggered": last,
+        "last_triggered_minutes": mins,
+        "pattern_based": obj.pattern_based,
+        "trigger_id": cfg.get("trigger_id"),
+        "operator": cfg.get("operator"),
+        "threshold": cfg.get("threshold"),
+        "pattern_count": cfg.get("pattern_count"),
+        "pattern_hours": cfg.get("pattern_hours"),
+        "brand": cfg.get("brand", ""),
+        "product": cfg.get("product", ""),
+    }
+    if obj.category:
+        d["category"] = obj.category
+    return d
+
+
 def all_rules(request):
-    return WorkspaceStore(request).get("alert_rules")
+    now = timezone.now()
+    return [rule_dict(r, now) for r in AlertRule.objects.for_workspace(_workspace(request))]
 
 
 def rule_by_id(request, rule_id):
-    for rule in all_rules(request):
-        if rule["id"] == rule_id:
-            return rule
-    return None
+    obj = AlertRule.objects.for_workspace(_workspace(request)).filter(pk=_pk(rule_id)).first()
+    return rule_dict(obj) if obj else None
 
 
 def parse_rule_filters(params):
@@ -123,7 +177,7 @@ def visible_rules(rules, filters):
         )
     ]
     sorters = {
-        "triggered": lambda r: r.get("last_triggered_minutes", sys.maxsize),
+        "triggered": lambda r: r["last_triggered_minutes"] if r.get("last_triggered_minutes") is not None else sys.maxsize,
         "created": lambda r: _desc_str(r["created_at"]),
         "priority": lambda r: PRIORITY_RANK[r.get("priority") or "low"],
         "name": lambda r: r["name"],
@@ -151,15 +205,25 @@ def competitor_filter_options(request):
 # Recent alerts
 
 
+def alert_dict(obj, now=None):
+    now = now or timezone.now()
+    mins = max(0, int((now - obj.triggered_at).total_seconds() // 60))
+    return {
+        **(obj.payload or {}),
+        "id": obj.pk,
+        "status": obj.status,
+        "triggered": relative_time(mins),
+    }
+
+
 def all_recent(request):
-    return WorkspaceStore(request).get("recent_alerts")
+    now = timezone.now()
+    return [alert_dict(a, now) for a in Alert.objects.for_workspace(_workspace(request))]
 
 
 def alert_by_id(request, alert_id):
-    for alert in all_recent(request):
-        if alert["id"] == alert_id:
-            return alert
-    return None
+    obj = Alert.objects.for_workspace(_workspace(request)).filter(pk=_pk(alert_id)).first()
+    return alert_dict(obj) if obj else None
 
 
 def recent_context(request, rule_param):

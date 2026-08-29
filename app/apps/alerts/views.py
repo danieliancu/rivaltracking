@@ -35,7 +35,7 @@ def _activity_context(params):
 
 def index(request):
     context = {
-        "kpis": selectors.kpi_cards(),
+        "kpis": selectors.kpi_cards(request),
         **_rules_context(request, request.GET),
         **_recent_context(request, request.GET),
         **_activity_context(request.GET),

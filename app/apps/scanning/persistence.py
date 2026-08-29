@@ -126,6 +126,7 @@ def persist_scan(competitor, items, job=None):
     changes = 0
     updated = 0
     ai_eligible = []
+    created_events = []
 
     for item in items:
         listing, created, previous = upsert_listing(competitor, item.normalized, now=now)
@@ -145,12 +146,16 @@ def persist_scan(competitor, items, job=None):
             listing.last_change_at = now
             listing.save(update_fields=["change_kind", "change_label", "last_change_at"])
         changes += len(events)
+        created_events.extend(e for e in events if e)
         ai_eligible.extend(e for e in events if e and is_ai_eligible(e))
 
     if not baseline and items:
-        changes += _handle_disappearances(competitor, seen_ids, now)
+        removed_events = _handle_disappearances(competitor, seen_ids, now)
+        changes += len(removed_events)
+        created_events.extend(removed_events)
 
     _enqueue_ai_analyses(ai_eligible)
+    _enqueue_alert_evaluation(created_events)
 
     if job is not None:
         job.changes_detected = (job.changes_detected or 0) + changes
@@ -168,18 +173,28 @@ def _enqueue_ai_analyses(events):
         analyse_change.delay(event.id)
 
 
+def _enqueue_alert_evaluation(events):
+    """Evaluate alert rules against each new event (delivery is isolated)."""
+    if not events:
+        return
+    from apps.alerts.tasks import evaluate_change_event
+
+    for event in events:
+        evaluate_change_event.delay(event.id)
+
+
 def _handle_disappearances(competitor, seen_ids, now):
     threshold = settings.LISTING_MISSES_BEFORE_REMOVED
     missing = ProductListing.objects.filter(
         workspace=competitor.workspace, competitor=competitor, active=True
     ).exclude(id__in=seen_ids)
-    removed = 0
+    removed = []
     for listing in missing:
         listing.consecutive_misses += 1
         if listing.consecutive_misses >= threshold:
             listing.active = False
             listing.save(update_fields=["consecutive_misses", "active"])
-            removed += len(detection.record_removed(listing, detected_at=now))
+            removed.extend(detection.record_removed(listing, detected_at=now))
         else:
             listing.save(update_fields=["consecutive_misses"])
     return removed

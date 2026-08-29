@@ -1,7 +1,6 @@
 """Context shared by the application shell (sidebar + header) on every page."""
 from django.urls import reverse
 
-from apps.core.store import WorkspaceStore
 
 NAV = [
     ("Overview", "layout-dashboard", "dashboard:overview"),
@@ -52,14 +51,12 @@ def shell(request):
         active = path == "/" if url == "/" else path.startswith(url)
         nav_items.append({"label": label, "icon": icon, "url": url, "active": active})
 
+    from apps.alerts.models import Alert
     from apps.competitors import selectors as competitor_selectors
 
-    store = WorkspaceStore(request)
-    try:
-        recent_alerts = store.get("recent_alerts")
-        unread = sum(1 for a in recent_alerts if a["status"] == "new")
-    except (ImportError, KeyError):  # data modules land incrementally during the build
-        unread = 0
+    unread = Alert.objects.for_workspace(getattr(request, "workspace", None)).filter(
+        status=Alert.Status.NEW
+    ).count()
     competitors = competitor_selectors.header_list(request)
     scan_context = _scan_context(request)
 

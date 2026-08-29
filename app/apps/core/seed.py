@@ -333,6 +333,57 @@ def _seed_discovery(workspace):
         )
 
 
+def _seed_alerts(workspace, now):
+    """Seed alert rules + recent alerts (payload preserved for the UI)."""
+    from datetime import timedelta
+
+    from apps.alerts.data import ALERT_RULES, RECENT_ALERTS
+    from apps.alerts.models import Alert, AlertRule
+
+    Alert.objects.filter(workspace=workspace).delete()
+    AlertRule.objects.filter(workspace=workspace).delete()
+
+    by_seed_id = {}
+    for r in ALERT_RULES:
+        rule = AlertRule.objects.create(
+            workspace=workspace,
+            name=r["name"],
+            type_group=r["type_group"],
+            condition=r["condition"],
+            competitors=r.get("competitors", "All competitors"),
+            category=r.get("category", ""),
+            frequency=r.get("frequency", "Immediate"),
+            priority=r.get("priority", "medium"),
+            enabled=r.get("active", True),
+            channels=["in_app"],
+            config={},
+        )
+        minutes = r.get("last_triggered_minutes")
+        AlertRule.objects.filter(id=rule.id).update(
+            created_at=timezone.make_aware(
+                timezone.datetime.fromisoformat(r["created_at"])
+            )
+            if r.get("created_at")
+            else now,
+            last_triggered_at=(now - timedelta(minutes=minutes)) if minutes is not None else None,
+        )
+        by_seed_id[r["id"]] = rule
+
+    for a in RECENT_ALERTS:
+        rule = by_seed_id.get(a.get("rule_id"))
+        payload = {k: v for k, v in a.items() if k not in ("id", "status")}
+        if rule is not None:
+            payload["rule_id"] = str(rule.pk)
+        Alert.objects.create(
+            workspace=workspace,
+            rule=rule,
+            status="viewed" if a.get("status") == "viewed" else "new",
+            title=a.get("rule_name", ""),
+            message=a.get("event", ""),
+            payload=payload,
+        )
+
+
 def _seed_conversations(workspace):
     """Seed a few Ask AI conversations (owner-attributed)."""
     from apps.ai.data import CONVERSATION_HISTORY
@@ -360,5 +411,6 @@ def seed_workspace(workspace, *, now=None):
     _seed_own_products(workspace, products, now)
     _seed_team(workspace)
     _seed_discovery(workspace)
+    _seed_alerts(workspace, now)
     _seed_conversations(workspace)
     return workspace
