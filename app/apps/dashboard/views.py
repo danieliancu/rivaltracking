@@ -4,6 +4,7 @@ from django.views.decorators.http import require_POST
 from apps.changes import selectors as change_selectors
 from apps.competitors import selectors as competitor_selectors
 from apps.discovery import selectors as discovery_selectors
+from apps.scanning import selectors as scan_selectors
 
 from . import selectors
 
@@ -23,6 +24,7 @@ def _context(request):
         "range_labels": selectors.RANGE_LABELS,
         "competitor": competitor,
         "competitors": competitor_selectors.all_rows(request),
+        "scan_health": scan_selectors.scan_health(request),
         "recent_events": change_selectors.recent_for_competitor(request, competitor_name),
         "suggestions": [
             {"d": d, "tone_class": discovery_selectors.tone_class(d)}

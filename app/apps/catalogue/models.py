@@ -63,6 +63,8 @@ class Product(models.Model):
         ]
         indexes = [
             models.Index(fields=["workspace", "category"]),
+            models.Index(fields=["workspace", "gtin"]),
+            models.Index(fields=["workspace", "sku"]),
         ]
 
     def __str__(self):

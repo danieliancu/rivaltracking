@@ -13,7 +13,7 @@ from apps.alerts.data import KIND_TO_TRIGGER
 from apps.competitors import selectors as competitor_selectors
 from apps.core.entities import category_param, slugify
 from apps.core.format import relative_time
-from apps.core.selectors import paginate, to_int
+from apps.core.selectors import PAGE_SIZE, paginate, to_int
 
 from . import filters
 from .data import (
@@ -157,10 +157,84 @@ def parse_request(request):
     return f, sort, page, pattern
 
 
+def _apply_db_filters(qs, f):
+    """Translate the change filter dict into ORM Q filters (DB-level)."""
+    from django.db.models import Q
+    from django.utils import timezone
+
+    q = f["query"].strip()
+    if q:
+        qs = qs.filter(
+            Q(product__name__icontains=q)
+            | Q(competitor__name__icontains=q)
+            | Q(product__category__icontains=q)
+        )
+    if f["competitor"] != filters.DEFAULT_CHANGE_FILTERS["competitor"]:
+        qs = qs.filter(competitor__name=f["competitor"])
+    if f["change_type"] != "all":
+        qs = qs.filter(kind=f["change_type"])
+    if f["category"] != filters.DEFAULT_CHANGE_FILTERS["category"]:
+        qs = qs.filter(product__category=f["category"])
+    if f["importance"] != "all":
+        qs = qs.filter(impact=f["importance"])
+    if f["product_slug"]:
+        qs = qs.filter(product__slug=f["product_slug"])
+    max_minutes = filters.RANGE_MINUTES_BY_LABEL.get(f["date_range"])
+    if max_minutes is not None:
+        since = timezone.now() - timezone.timedelta(minutes=max_minutes)
+        qs = qs.filter(detected_at__gte=since)
+    return qs
+
+
+def _db_order(sort):
+    from django.db.models import Case, IntegerField, Value, When
+
+    if sort == "impact":
+        rank = Case(
+            When(impact="high", then=Value(0)),
+            When(impact="medium", then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField(),
+        )
+        return ["_impact_rank", "-detected_at"], rank
+    if sort == "competitor":
+        return ["competitor__name", "-detected_at"], None
+    if sort == "product":
+        return ["product__name", "-detected_at"], None
+    return ["-detected_at"], None  # recent (default)
+
+
 def events_page(request, f, sort, page):
-    """Filtered + sorted + paginated rows, annotated with the alert trigger id."""
-    rows = filters.sort_changes(filters.filter_changes(all_events(request), f), sort)
-    page_data = paginate(rows, page)
+    """DB-level filter → sort → paginate; presents only the current page.
+
+    The two percentage-based sorts need the parsed %, which isn't a DB column,
+    so they sort the (already DB-filtered) page set in Python.
+    """
+    now = timezone.now()
+    qs = _apply_db_filters(_events_qs(request), f)
+
+    if sort in ("biggest-drop", "biggest-increase"):
+        rows = filters.sort_changes([event_dict(e, now) for e in qs], sort)
+        page_data = paginate(rows, page)
+    else:
+        order, annotation = _db_order(sort)
+        if annotation is not None:
+            qs = qs.annotate(_impact_rank=annotation)
+        qs = qs.order_by(*order)
+        total = qs.count()
+        page_count = max(1, -(-total // PAGE_SIZE))
+        page = max(1, min(page, page_count))
+        start = (page - 1) * PAGE_SIZE
+        window = list(qs[start : start + PAGE_SIZE])
+        rows = [event_dict(e, now) for e in window]
+        page_data = {
+            "rows": rows,
+            "page": page,
+            "page_count": page_count,
+            "from": start + 1 if total else 0,
+            "to": start + len(rows),
+            "total": total,
+        }
     page_data["rows"] = [
         dict(e, trigger=KIND_TO_TRIGGER.get(e["kind"], "")) for e in page_data["rows"]
     ]
