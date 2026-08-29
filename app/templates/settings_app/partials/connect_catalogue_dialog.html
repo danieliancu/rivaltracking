@@ -1,20 +1,74 @@
 {% extends "components/dialog_shell.html" %}
 {% load ui %}
-{% block dialog_size %}sm:max-w-md{% endblock %}
+{% block dialog_size %}sm:max-w-lg{% endblock %}
 {% block dialog_content %}
 <div class="flex flex-col gap-2 text-center sm:text-left">
   <h2 class="text-base font-bold leading-none">Connect your catalogue</h2>
   <p class="text-xs text-muted-foreground">Connecting your own catalogue unlocks direct comparison, pricing position and catalogue-gap analysis.</p>
 </div>
-<div class="flex flex-col gap-2.5">
-  {% include "settings_app/partials/connect_row.html" with icon="globe" row_title="Website" description="RivalTracking crawls your own catalogue like a competitor's." %}
-  {% include "settings_app/partials/connect_row.html" with icon="database" row_title="API" description="Push your catalogue directly from your platform." %}
-  {% include "settings_app/partials/connect_row.html" with icon="file-spreadsheet" row_title="CSV" description="Upload a product export from your store." %}
+
+<div class="flex flex-col gap-4">
+  {# ---- Website ---- #}
+  <div class="rounded-lg border p-3.5">
+    <div class="mb-2 flex items-center gap-2 text-sm font-bold">{% icon "globe" class="size-4 text-primary" %} Website</div>
+    {% if website_source %}
+      <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
+        {% if website_source.status == "importing" %}
+          <span class="inline-flex items-center gap-1 rounded-full bg-info/10 px-2 py-0.5 font-semibold text-info">Importing…</span>
+        {% elif website_source.status == "connected" %}
+          <span class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">{% icon "check" class="size-3" %} Connected</span>
+        {% elif website_source.status == "partial" %}
+          <span class="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning">Partially imported</span>
+        {% else %}
+          <span class="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 font-semibold text-destructive">Failed</span>
+        {% endif %}
+        <span class="text-muted-foreground">{{ website_source.website_url }}</span>
+      </div>
+      <div class="mb-2.5 grid grid-cols-3 gap-2 text-center">
+        <div class="rounded-md bg-muted/50 py-1.5"><div class="text-sm font-bold">{{ website_source.products_found }}</div><div class="text-[10px] text-muted-foreground">Products</div></div>
+        <div class="rounded-md bg-muted/50 py-1.5"><div class="text-sm font-bold">{{ website_source.errors_count }}</div><div class="text-[10px] text-muted-foreground">Errors</div></div>
+        <div class="rounded-md bg-muted/50 py-1.5"><div class="text-sm font-bold">{{ website_source.last_import_at|default:"—"|date:"H:i" }}</div><div class="text-[10px] text-muted-foreground">Last import</div></div>
+      </div>
+      {% if website_source.error_summary %}<p class="mb-2 text-[11px] text-destructive">{{ website_source.error_summary|truncatechars:160 }}</p>{% endif %}
+      <div class="flex gap-2">
+        <button type="button" hx-post="{% url 'settings_app:catalogue_rescan' %}" hx-target="#modal-root" hx-swap="innerHTML"
+                class="inline-flex h-8 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-semibold hover:bg-accent">{% icon "refresh-cw" class="size-3.5" %} Re-scan</button>
+        <button type="button" hx-post="{% url 'settings_app:catalogue_disconnect' %}" hx-target="#modal-root" hx-swap="innerHTML"
+                class="inline-flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold text-destructive hover:bg-destructive/10">Disconnect</button>
+      </div>
+    {% else %}
+      <p class="mb-2 text-xs text-muted-foreground">RivalTracking crawls your own catalogue like a competitor's — no product is treated as a competitor.</p>
+      <form hx-post="{% url 'settings_app:catalogue_connect' %}" hx-target="#modal-root" hx-swap="innerHTML" class="flex gap-2">
+        <input type="text" name="website_url" placeholder="mystore.co.uk" value="{{ website_url|default:'' }}"
+               class="h-8 flex-1 rounded-lg border border-input bg-card px-3 text-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+        <button type="submit" class="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:bg-primary/90">Connect</button>
+      </form>
+      {% if website_error %}<p class="mt-1.5 text-[11px] text-destructive">{{ website_error }}</p>{% endif %}
+    {% endif %}
+  </div>
+
+  {# ---- CSV ---- #}
+  <div class="rounded-lg border p-3.5">
+    <div class="mb-2 flex items-center gap-2 text-sm font-bold">{% icon "file-spreadsheet" class="size-4 text-primary" %} CSV upload</div>
+    <p class="mb-2 text-xs text-muted-foreground">Upload a product export (SKU, title, URL, price, brand, GTIN/EAN/MPN).</p>
+    <form hx-post="{% url 'settings_app:catalogue_csv' %}" hx-target="#modal-root" hx-swap="innerHTML" hx-encoding="multipart/form-data" class="flex items-center gap-2">
+      <input type="file" name="file" accept=".csv,text/csv" class="flex-1 text-xs file:mr-2 file:rounded-md file:border-0 file:bg-muted file:px-2 file:py-1 file:text-xs">
+      <button type="submit" class="inline-flex h-8 items-center rounded-lg bg-primary px-3 text-xs font-bold text-primary-foreground hover:bg-primary/90">Import</button>
+    </form>
+    {% if csv_result %}
+      {% if csv_result.error %}<p class="mt-1.5 text-[11px] text-destructive">{{ csv_result.error }}</p>
+      {% else %}<p class="mt-1.5 text-[11px] text-success">Imported {{ csv_result.imported }} new, updated {{ csv_result.updated }}{% if csv_result.errors %} · {{ csv_result.errors|length }} row error(s){% endif %}.</p>{% endif %}
+    {% endif %}
+  </div>
+
+  {# ---- API ---- #}
+  <div class="rounded-lg border p-3.5">
+    <div class="mb-1 flex items-center gap-2 text-sm font-bold">{% icon "database" class="size-4 text-muted-foreground" %} API</div>
+    <p class="text-xs text-muted-foreground">Push your catalogue via <code class="rounded bg-muted px-1">POST /catalogue/api/ingest/</code> with your workspace token. See the docs.</p>
+  </div>
 </div>
-<div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-  <button type="button" @click="close()"
-          class="inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-background px-4 py-2 text-xs font-semibold shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground">
-    Close
-  </button>
+
+<div class="flex justify-end">
+  <button type="button" @click="close()" class="inline-flex h-9 items-center justify-center rounded-lg border bg-background px-4 text-xs font-semibold hover:bg-accent">Close</button>
 </div>
 {% endblock %}

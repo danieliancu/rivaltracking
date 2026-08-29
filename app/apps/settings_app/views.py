@@ -57,9 +57,63 @@ def save(request, section):
     return HttpResponse(status=204)
 
 
+def _catalogue_dialog_context(request, **extra):
+    from apps.catalogue import services as catalogue_services
+
+    source = catalogue_services.get_source(request.workspace, "website")
+    return {"website_source": source, **extra}
+
+
+def _catalogue_dialog(request, **extra):
+    return render(
+        request,
+        "settings_app/partials/connect_catalogue_dialog.html",
+        _catalogue_dialog_context(request, **extra),
+    )
+
+
 def connect_catalogue(request):
     """Connect-your-catalogue dialog fragment (HTMX → #modal-root)."""
-    return render(request, "settings_app/partials/connect_catalogue_dialog.html")
+    return _catalogue_dialog(request)
+
+
+@require_POST
+def catalogue_connect(request):
+    from apps.catalogue import services as catalogue_services
+
+    source, error = catalogue_services.connect_website(
+        request.workspace, request.POST.get("website_url", "")
+    )
+    return _catalogue_dialog(request, website_error=error)
+
+
+@require_POST
+def catalogue_rescan(request):
+    from apps.catalogue import services as catalogue_services
+
+    catalogue_services.rescan_website(request.workspace)
+    return _catalogue_dialog(request)
+
+
+@require_POST
+def catalogue_disconnect(request):
+    from apps.catalogue import services as catalogue_services
+
+    catalogue_services.disconnect_source(request.workspace, "website")
+    return _catalogue_dialog(request)
+
+
+@require_POST
+def catalogue_csv(request):
+    from apps.catalogue import csv_import
+
+    upload = request.FILES.get("file")
+    result = None
+    if upload is None:
+        result = {"error": "Choose a CSV file to upload."}
+    else:
+        result = csv_import.import_csv(request.workspace, upload)
+    return _catalogue_dialog(request, csv_result=result)
 
 
 def manage_plan(request):

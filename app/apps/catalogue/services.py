@@ -96,3 +96,71 @@ def unique_product_slug(workspace, name):
         slug = f"{base}-{i}"
         i += 1
     return slug
+
+
+# ---------------------------------------------------------------------------
+# Own-catalogue connection (website source)
+
+def _domain_from_url(url):
+    from urllib.parse import urlparse
+    import re
+
+    host = urlparse(url if "://" in url else f"https://{url}").netloc or url
+    return re.sub(r"^www\.", "", host).strip("/").lower()
+
+
+def get_source(workspace, source_type="website"):
+    from .models import OwnCatalogueSource
+
+    return OwnCatalogueSource.objects.for_workspace(workspace).filter(
+        source_type=source_type
+    ).first()
+
+
+def connect_website(workspace, url):
+    """Create/update the website source and enqueue an import. Returns source."""
+    from .models import OwnCatalogueSource
+    from . import tasks
+
+    url = url.strip()
+    if not url:
+        return None, "Enter your store's website address."
+    if "://" not in url:
+        url = f"https://{url}"
+    domain = _domain_from_url(url)
+    if not domain or "." not in domain:
+        return None, "Enter a valid website address, e.g. mystore.co.uk."
+    source, _ = OwnCatalogueSource.objects.update_or_create(
+        workspace=workspace,
+        source_type=OwnCatalogueSource.SourceType.WEBSITE,
+        defaults={
+            "website_url": url,
+            "domain": domain,
+            "status": OwnCatalogueSource.Status.IMPORTING,
+        },
+    )
+    tasks.import_catalogue.delay(source.id)
+    source.refresh_from_db()
+    return source, None
+
+
+def rescan_website(workspace):
+    from . import tasks
+
+    source = get_source(workspace, "website")
+    if source is None:
+        return None
+    tasks.import_catalogue.delay(source.id)
+    source.refresh_from_db()
+    return source
+
+
+def disconnect_source(workspace, source_type="website"):
+    """Remove a catalogue source and the own products it imported."""
+    from .models import OwnProduct
+
+    source = get_source(workspace, source_type)
+    if source is None:
+        return
+    OwnProduct.objects.filter(workspace=workspace, source=source).delete()
+    source.delete()
