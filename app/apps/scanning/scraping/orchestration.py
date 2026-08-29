@@ -35,6 +35,33 @@ class ScanOutcome:
     errors: int = 0
     items: list = field(default_factory=list)
     error_messages: list = field(default_factory=list)
+    blocked: bool = False
+    block_reason: str = ""
+
+
+def _looks_blocked(result):
+    """True when a fetch was *refused* by anti-bot protection (Cloudflare/WAF)
+    rather than simply missing — so we can tell the user the site is protected
+    instead of implying it has no products.
+
+    Refusal is judged by HTTP status only. A 200 OK page is never "blocked" even
+    if its markup happens to contain words like "cloudflare" or "captcha"
+    (CDN scripts, contact forms, etc. commonly do) — that was a false positive.
+    A Cloudflare interstitial is served with a 403/503, which this catches."""
+    if result is None:
+        return False
+    if result.status_code in (401, 403, 429, 503):
+        return True
+    # Some WAFs (e.g. AWS WAF) serve a JS challenge with HTTP 202 instead of a
+    # refusal code. 202 for a page GET is already abnormal, so gate on explicit
+    # challenge markers to stay clear of the 200-OK false positive.
+    if result.status_code == 202:
+        body = (getattr(result, "text", "") or "").lower()
+        return any(
+            m in body
+            for m in ("awswaf", "gokuprops", "challenge-platform", "px-captcha", "captcha")
+        )
+    return False
 
 
 def _url_hash(url: str) -> str:
@@ -88,7 +115,17 @@ def run_competitor_scan(competitor, *, fetcher=None, job=None, throttle=True, pe
     retained_until = now + timedelta(days=settings.RAW_CAPTURE_RETENTION_DAYS)
 
     try:
-        adapter = select_adapter(fetcher.fetch(_base_url(competitor)))
+        home = fetcher.fetch(_base_url(competitor))
+        if _looks_blocked(home):
+            outcome.blocked = True
+            outcome.block_reason = (
+                f"Site refused automated access (HTTP {home.status_code}); "
+                "it is protected by anti-bot software (e.g. Cloudflare)."
+            )
+            outcome.errors += 1
+            outcome.error_messages.append(outcome.block_reason)
+            return outcome
+        adapter = select_adapter(home)
         urls = adapter.discover(competitor, fetcher)[: settings.SCAN_MAX_PAGES]
 
         for url in urls:
@@ -131,6 +168,18 @@ def run_competitor_scan(competitor, *, fetcher=None, job=None, throttle=True, pe
     finally:
         if own_fetcher:
             fetcher.close()
+
+    # Home was reachable but the product pages were refused wholesale — also a
+    # protected site, not an empty one.
+    if not outcome.blocked and outcome.pages_requested and outcome.products_found == 0:
+        refused = sum(
+            1
+            for m in outcome.error_messages
+            if any(code in m for code in ("HTTP 403", "HTTP 429", "HTTP 503", "HTTP 401"))
+        )
+        if refused and refused >= outcome.pages_requested * 0.8:
+            outcome.blocked = True
+            outcome.block_reason = "Product pages refused automated access (anti-bot)."
 
     if persist_hook is not None:
         persist_hook(competitor, outcome.items, job)

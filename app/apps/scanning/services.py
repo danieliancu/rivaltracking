@@ -109,11 +109,36 @@ def enqueue_scan(competitor, *, trigger=ScanJob.Trigger.MANUAL):
     active = ScanJob.objects.filter(
         competitor=competitor, status__in=[ScanJob.Status.QUEUED, ScanJob.Status.RUNNING]
     ).first()
-    if active is not None:
+    if active is not None and not _is_stale(active):
         return active
+    if active is not None:
+        _reclaim_stale_job(active)
     job = create_scan_job(competitor, trigger=trigger)
     _dispatch_scan_job(job)
     return job
+
+
+def _is_stale(job):
+    """An active job whose worker/thread died leaves it queued/running forever.
+    Treat it as orphaned once it is older than SCAN_STALE_MINUTES."""
+    stamp = job.started_at or job.queued_at
+    if stamp is None:
+        return False
+    age = (timezone.now() - stamp).total_seconds()
+    return age > settings.SCAN_STALE_MINUTES * 60
+
+
+def _reclaim_stale_job(job):
+    """Fail an orphaned job and un-stick its competitor so a re-scan can run."""
+    job.status = ScanJob.Status.FAILED
+    job.errors_count = (job.errors_count or 0) + 1
+    job.error_summary = "Scan did not finish (worker restarted); reclaimed."
+    job.finished_at = timezone.now()
+    job.save(update_fields=["status", "errors_count", "error_summary", "finished_at"])
+    Competitor.objects.filter(
+        id=job.competitor_id, status=Competitor.Status.SCANNING
+    ).update(status=Competitor.Status.ATTENTION)
+    release_scan_lock(job.competitor_id)
 
 
 def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
@@ -135,6 +160,7 @@ def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
     job.save(update_fields=["status", "started_at"])
 
     competitor = job.competitor
+    blocked = False
     logger.info(
         "scan.started job=%s workspace=%s competitor=%s trigger=%s",
         job.id, job.workspace_id, competitor.slug, job.trigger_type,
@@ -162,6 +188,10 @@ def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
                 if outcome.errors and not outcome.products_found
                 else ScanJob.Status.COMPLETED
             )
+            if outcome.blocked:
+                blocked = True
+                job.status = ScanJob.Status.FAILED
+                job.error_summary = outcome.block_reason or job.error_summary
             if outcome.products_found and job.status != ScanJob.Status.FAILED:
                 from apps.matching.tasks import match_competitor_listings
 
@@ -193,13 +223,21 @@ def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
             Competitor.Status.SCANNING,
             Competitor.Status.INITIALISING,
         )
+        if blocked:
+            new_status = Competitor.Status.BLOCKED
+            new_note = "Protected by anti-bot software — cannot scan automatically."
+        elif settled and pre_active:
+            new_status = Competitor.Status.HEALTHY
+            new_note = "" if competitor.status == Competitor.Status.BLOCKED else competitor.note
+        else:
+            new_status = competitor.status
+            new_note = competitor.note
         Competitor.objects.filter(id=competitor.id).update(
             last_scan_at=job.finished_at,
             next_scan_at=next_scan_time(competitor, job.finished_at),
             products_count=product_count,
-            status=Competitor.Status.HEALTHY
-            if settled and pre_active
-            else competitor.status,
+            status=new_status,
+            note=new_note,
         )
         release_scan_lock(competitor.id)
     return job

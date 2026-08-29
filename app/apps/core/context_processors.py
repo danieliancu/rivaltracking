@@ -70,6 +70,7 @@ def shell(request):
         "scan_context": scan_context,
         "daily_intelligence": _daily_intelligence(workspace),
         "catalogue_import": _catalogue_import(workspace),
+        "scan_activity": _scan_activity(workspace),
         "current_workspace": workspace,
         "current_membership": getattr(request, "membership", None),
     }
@@ -121,4 +122,30 @@ def _catalogue_import(workspace):
         in (OwnCatalogueSource.Status.CONNECTED, OwnCatalogueSource.Status.PARTIAL),
         "count": src.products_found or 0,
         "domain": src.domain or src.website_url,
+    }
+
+
+def _scan_activity(workspace):
+    """Live competitor-scan activity for the discreet header chip. Counts only
+    non-stale queued/running jobs (orphaned jobs are ignored)."""
+    from datetime import timedelta
+
+    from django.conf import settings as dj_settings
+    from django.utils import timezone
+
+    from apps.scanning.models import ScanJob
+
+    cutoff = timezone.now() - timedelta(
+        minutes=getattr(dj_settings, "SCAN_STALE_MINUTES", 15)
+    )
+    jobs = list(
+        ScanJob.objects.for_workspace(workspace)
+        .filter(status__in=[ScanJob.Status.QUEUED, ScanJob.Status.RUNNING])
+        .select_related("competitor")
+    )
+    active = [j for j in jobs if (j.started_at or j.queued_at) and (j.started_at or j.queued_at) >= cutoff]
+    return {
+        "active": bool(active),
+        "count": len(active),
+        "name": active[0].competitor.name if len(active) == 1 else None,
     }

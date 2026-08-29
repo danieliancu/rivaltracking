@@ -53,8 +53,19 @@ def _best_fuzzy(listing):
     title = (product.name if product else listing.competitor_product_name) or ""
     if not title:
         return None, 0.0, MatchResult.Method.NONE
+    # Never fuzzy-merge two *different* products of the SAME competitor: a
+    # canonical holds at most one listing per competitor, so exclude canonicals
+    # this competitor already lists. (Deterministic GTIN/SKU matches, which are
+    # genuine same-product identifiers, are handled separately and not gated.)
+    same_competitor_products = set(
+        ProductListing.objects.filter(competitor_id=listing.competitor_id, active=True)
+        .exclude(id=listing.id)
+        .values_list("product_id", flat=True)
+    )
     best, best_score = None, 0.0
     for candidate in _candidates(listing).only("id", "name", "brand"):
+        if candidate.id in same_competitor_products:
+            continue
         score = fuzz.token_sort_ratio(title, candidate.name)
         if product and product.brand and candidate.brand:
             if product.brand.lower() == candidate.brand.lower():

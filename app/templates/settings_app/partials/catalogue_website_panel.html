@@ -13,7 +13,7 @@
         <span class="inline-flex items-center gap-1.5 rounded-full bg-info/10 px-2 py-0.5 font-semibold text-info">
           {% icon "loader-2" class="size-3 animate-spin" %} Importing…</span>
       {% elif website_source.status == "connected" %}
-        <span class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">{% icon "check" class="size-3" %} Connected</span>
+        <span class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 font-semibold text-success">Connected</span>
       {% elif website_source.status == "partial" %}
         <span class="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 font-semibold text-warning">Partially imported</span>
       {% else %}

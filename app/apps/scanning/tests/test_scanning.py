@@ -68,3 +68,34 @@ def test_execute_scan_job_is_idempotent_on_finished(workspace):
     assert job.status == ScanJob.Status.COMPLETED
     # Running again on a finished job is a no-op.
     assert services.execute_scan_job(job.id) is None
+
+
+class _BlockedFetcher:
+    """Every fetch is refused like a Cloudflare/WAF anti-bot challenge."""
+
+    def fetch(self, url):
+        from apps.scanning.scraping.fetchers.base import FetchResult
+
+        return FetchResult(
+            url=url,
+            status_code=403,
+            text="<html><head><title>Just a moment...</title></head></html>",
+            final_url=url,
+            ok=False,
+        )
+
+    def close(self):
+        pass
+
+
+def test_blocked_site_marks_competitor_protected(workspace):
+    competitor = _competitor(workspace)
+    competitor.status = Competitor.Status.INITIALISING
+    competitor.save(update_fields=["status"])
+    job = services.create_scan_job(competitor)
+    services.execute_scan_job(job.id, fetcher=_BlockedFetcher())
+    job.refresh_from_db()
+    competitor.refresh_from_db()
+    assert job.status == ScanJob.Status.FAILED
+    assert competitor.status == Competitor.Status.BLOCKED
+    assert "anti-bot" in competitor.note.lower()

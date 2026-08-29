@@ -19,6 +19,7 @@ class Competitor(models.Model):
         SCANNING = "scanning", "Scanning"
         INITIALISING = "initialising", "Initialising"
         PAUSED = "paused", "Paused"
+        BLOCKED = "blocked", "Protected"
 
     workspace = models.ForeignKey(
         "accounts.Workspace", on_delete=models.CASCADE, related_name="competitors"

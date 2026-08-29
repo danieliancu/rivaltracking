@@ -6,13 +6,16 @@
       @input="dirty = true" @change="dirty = true"
       hx-post="{% url 'settings_app:save' 'workspace' %}" hx-target="#workspace-form" hx-swap="outerHTML">
   <div class="grid gap-4 sm:grid-cols-2">
-    {% include "settings_app/partials/form_field.html" with label="Workspace name" name="name" value=w.name %}
-    {% include "settings_app/partials/form_field.html" with label="Company website" name="website" value=w.website error=website_error %}
-    {% include "settings_app/partials/form_field.html" with label="Primary market" name="market" value=w.market options=options.markets %}
-    {% include "settings_app/partials/form_field.html" with label="Industry" name="industry" value=w.industry options=options.industries %}
-    {% include "settings_app/partials/form_field.html" with label="Currency" name="currency" value=w.currency options=options.currencies %}
-    {% include "settings_app/partials/form_field.html" with label="Timezone" name="timezone" value=w.timezone options=options.timezones %}
-    {% include "settings_app/partials/form_field.html" with label="Date format" name="date_format" value=w.date_format options=options.date_formats %}
+    {# `only` isolates each field: the section context carries an `options` dict
+       that would otherwise leak into the plain text fields and render them as
+       selects (making Workspace name / Company website un-editable). #}
+    {% include "settings_app/partials/form_field.html" with label="Workspace name" name="name" value=w.name only %}
+    {% include "settings_app/partials/form_field.html" with label="Company website" name="website" value=w.website error=website_error only %}
+    {% include "settings_app/partials/form_field.html" with label="Primary market" name="market" value=w.market options=options.markets editable=True only %}
+    {% include "settings_app/partials/form_field.html" with label="Industry" name="industry" value=w.industry options=options.industries editable=True only %}
+    {% include "settings_app/partials/form_field.html" with label="Currency" name="currency" value=w.currency options=options.currencies editable=True only %}
+    {% include "settings_app/partials/form_field.html" with label="Timezone" name="timezone" value=w.timezone options=options.timezones editable=True only %}
+    {% include "settings_app/partials/form_field.html" with label="Date format" name="date_format" value=w.date_format options=options.date_formats editable=True only %}
   </div>
   {% include "settings_app/partials/save_bar.html" %}
 </form>

@@ -186,6 +186,11 @@ HTTP_USER_AGENT = env(
 )
 SCAN_MAX_PAGES = int(env("SCAN_MAX_PAGES", default="200"))
 SCAN_MAX_DEPTH = int(env("SCAN_MAX_DEPTH", default="3"))
+# A scan job stuck in queued/running past this many minutes is treated as
+# orphaned (e.g. a worker/dev-server died mid-scan) and reclaimed so the
+# competitor can be scanned again. Real workers use acks_late; this is the
+# local/eager safety net.
+SCAN_STALE_MINUTES = int(env("SCAN_STALE_MINUTES", default="15"))
 SCRAPER_CONCURRENCY = int(env("SCRAPER_CONCURRENCY", default="4"))
 SCRAPER_PER_DOMAIN_RPS = float(env("SCRAPER_PER_DOMAIN_RPS", default="1"))
 SCRAPER_MAX_RETRIES = int(env("SCRAPER_MAX_RETRIES", default="3"))

@@ -92,6 +92,7 @@ STATUS_VARIANTS = {
     "attention": ("Attention", "border-warning/25 bg-warning/10 text-warning", "bg-warning", False),
     "paused": ("Paused", "border-border bg-muted text-muted-foreground", "bg-muted-foreground", False),
     "initialising": ("Initialising", "border-purple/25 bg-purple/10 text-purple", "bg-purple", True),
+    "blocked": ("Protected", "border-destructive/25 bg-destructive/10 text-destructive", "bg-destructive", False),
 }
 
 
@@ -244,9 +245,15 @@ THUMBNAIL_SIZES = {
 
 @register.inclusion_tag("components/product_thumbnail.html")
 def product_thumbnail(product, size="sm"):
+    from django.templatetags.static import static
+
     box, glyph = THUMBNAIL_SIZES.get(size, THUMBNAIL_SIZES["sm"])
+    image = product.get("image")
+    if image and "://" not in image and not image.startswith("//"):
+        # Local Phase-1 placeholder asset; scraped images are absolute URLs.
+        image = static(image)
     return {
-        "image": product.get("image"),
+        "image": image,
         "name": product.get("name", ""),
         "tone_class": PRODUCT_TONES.get(product.get("tone"), PRODUCT_TONES["info"]),
         "icon": product.get("icon") or product_icon_for(product.get("slug", "")),

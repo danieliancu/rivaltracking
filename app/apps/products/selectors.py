@@ -75,9 +75,10 @@ def product_dict(product, primary, listings, now):
         "source_url": primary.source_url,
         "image": product.image_url or None,
     }
-    if len(listings) > 1 or product.match_confidence:
+    distinct_competitors = len({m.competitor_id for m in listings})
+    if distinct_competitors > 1 or product.match_confidence:
         row["matched"] = {
-            "count": len(listings),
+            "count": distinct_competitors,
             "confidence": product.match_confidence,
             "insight": product.match_insight,
             "listings": [_matched_listing(m, now) for m in listings],
@@ -105,6 +106,53 @@ def _row_from_product(product, now):
     return product_dict(product, primary, listings, now)
 
 
+def _own_dict(own, now, *, source_url=""):
+    """Row for an imported own-catalogue product that no competitor lists yet."""
+    p = own.product
+    return {
+        "slug": p.slug if p else own.own_sku,
+        "name": own.name or (p.name if p else own.own_sku),
+        "sku": own.own_sku or (p.sku if p else ""),
+        "tone": (p.tone if p else "") or "info",
+        "competitor": "Your catalogue",
+        "category": own.category or (p.category if p else ""),
+        "current_price": _price(own.our_price),
+        "previous_price": None,
+        "change": {"kind": "", "label": ""},
+        "in_stock": own.in_stock,
+        "last_change": "—",
+        "last_change_minutes": 0,
+        "discovered_at": "",
+        "source_url": source_url,
+        "image": own.image_url or (p.image_url if p else None) or None,
+        "own": True,
+    }
+
+
+def _own_only_rows(request, now):
+    """Imported own products whose canonical product no competitor lists yet
+    (so they are not already shown by the competitor path)."""
+    ws = _workspace(request)
+    backed = set(
+        ProductListing.objects.for_workspace(ws).values_list("product_id", flat=True)
+    )
+    from apps.catalogue.models import OwnListing, OwnProduct
+
+    url_by_own = dict(
+        OwnListing.objects.for_workspace(ws)
+        .exclude(url="")
+        .values_list("own_product_id", "url")
+    )
+    rows, seen = [], set()
+    qs = OwnProduct.objects.for_workspace(ws).select_related("product")
+    for own in qs:
+        if own.product_id in backed or own.product_id in seen:
+            continue
+        seen.add(own.product_id)
+        rows.append(_own_dict(own, now, source_url=url_by_own.get(own.id, "")))
+    return rows
+
+
 def all_rows(request):
     now = timezone.now()
     rows = []
@@ -112,14 +160,35 @@ def all_rows(request):
         row = _row_from_product(product, now)
         if row is not None:
             rows.append(row)
+    rows.extend(_own_only_rows(request, now))
     return rows
 
 
 def by_slug(request, slug):
     product = _products_qs(request).filter(slug=slug).first()
-    if product is None:
+    if product is not None:
+        row = _row_from_product(product, timezone.now())
+        if row is not None:
+            return row
+    # Own-catalogue product with no competitor listings yet.
+    from apps.catalogue.models import OwnListing, OwnProduct
+
+    own = (
+        OwnProduct.objects.for_workspace(_workspace(request))
+        .select_related("product")
+        .filter(product__slug=slug)
+        .first()
+    )
+    if own is None:
         return None
-    return _row_from_product(product, timezone.now())
+    url = (
+        OwnListing.objects.for_workspace(_workspace(request))
+        .filter(own_product=own)
+        .exclude(url="")
+        .values_list("url", flat=True)
+        .first()
+    ) or ""
+    return _own_dict(own, timezone.now(), source_url=url)
 
 
 def watchlist(request):
@@ -131,10 +200,25 @@ def watchlist(request):
 
 
 def kpi_cards(request):
+    from apps.catalogue.models import OwnProduct
+
     ws = _workspace(request)
     primary = ProductListing.objects.for_workspace(ws).filter(is_primary=True)
+    # "Total" = what the table actually shows: canonical products a competitor
+    # lists, plus imported own products no competitor lists yet.
+    backed_ids = set(
+        ProductListing.objects.for_workspace(ws).values_list("product_id", flat=True)
+    )
+    own_only = (
+        OwnProduct.objects.for_workspace(ws)
+        .exclude(product_id__in=backed_ids)
+        .exclude(product_id=None)
+        .values("product_id")
+        .distinct()
+        .count()
+    )
     values = {
-        "total": Product.objects.for_workspace(ws).count(),
+        "total": len(backed_ids) + own_only,
         "new": primary.filter(change_kind="new").count(),
         "price": primary.filter(change_kind__in=["drop", "increase"]).count(),
         "stock": primary.filter(change_kind__in=["oos", "back"]).count(),

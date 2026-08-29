@@ -17,6 +17,13 @@ def search(request):
     )
 
 
+@require_GET
+def scan_status(request):
+    """Discreet header scan-activity chip — polled while any scan runs
+    (context comes from the shell context processor)."""
+    return render(request, "partials/scan_status.html")
+
+
 @require_POST
 def set_range(request):
     """Store the global Today/7D/30D range and re-render the tabs."""

@@ -3,7 +3,15 @@
    placeholder, post_url (optional → auto-save on change), x_model (optional). {% endcomment %}
 <div class="flex flex-col gap-1.5">
   <label class="flex select-none items-center gap-2 text-xs font-semibold leading-none">{{ label }}</label>
-  {% if options %}
+  {% if options and editable %}
+  {# Editable combobox: suggestions via datalist, but any free-text value is allowed. #}
+  <input type="text" name="{{ name }}" value="{{ value|default_if_none:'' }}" list="dl-{{ name }}"
+         aria-label="{{ label }}" autocomplete="off"
+         {% if x_model %}x-model="{{ x_model }}"{% endif %}
+         {% if post_url %}hx-post="{{ post_url }}" hx-trigger="change" hx-swap="none"{% endif %}
+         class="h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+  <datalist id="dl-{{ name }}">{% for o in options %}<option value="{{ o }}"></option>{% endfor %}</datalist>
+  {% elif options %}
   <span class="relative inline-flex w-full">
     <select name="{{ name }}" aria-label="{{ label }}"
             {% if x_model %}x-model="{{ x_model }}"{% endif %}

@@ -1,0 +1,14 @@
+{% load ui %}{% comment %} Discreet header chip shown while any competitor scan is
+   running (between search and the range tabs; wraps to its own row on mobile).
+   Polls every few seconds so it catches scans triggered from anywhere, and
+   quietly disappears when none are active. Context: scan_activity (shell). {% endcomment %}
+<div id="scan-status"
+     class="{% if scan_activity.active %}order-last basis-full md:order-none md:basis-auto{% else %}hidden{% endif %}"
+     hx-get="{% url 'core:scan_status' %}" hx-trigger="load delay:4s" hx-target="#scan-status" hx-swap="outerHTML">
+  {% if scan_activity.active %}
+  <span class="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">
+    {% icon "loader-2" class="size-3 animate-spin" %}
+    {% if scan_activity.name %}Scanning {{ scan_activity.name }}…{% else %}Scanning {{ scan_activity.count }} competitors…{% endif %}
+  </span>
+  {% endif %}
+</div>

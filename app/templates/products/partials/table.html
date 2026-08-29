@@ -87,7 +87,7 @@
             <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.category }}</td>
             <td class="whitespace-nowrap px-3.5 py-2.5 align-middle font-medium text-foreground">{{ row.current_price|gbp }}</td>
             <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.previous_price|gbp }}</td>
-            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% change_badge row.change.kind row.change.label %}</td>
+            <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% if row.change.kind %}{% change_badge row.change.kind row.change.label %}{% else %}<span class="text-muted-foreground">—</span>{% endif %}</td>
             <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{% stock_badge row.in_stock %}</td>
             <td class="whitespace-nowrap px-3.5 py-2.5 align-middle">{{ row.last_change }}</td>
             <td class="whitespace-nowrap px-2 py-2.5 text-right align-middle">
@@ -116,7 +116,7 @@
         {% include "products/partials/row_actions.html" %}
       </div>
       <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
-        {% change_badge row.change.kind row.change.label %}
+        {% if row.change.kind %}{% change_badge row.change.kind row.change.label %}{% endif %}
         {% stock_badge row.in_stock %}
         {% include "products/partials/matched_badge.html" %}
       </div>
