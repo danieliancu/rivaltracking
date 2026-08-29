@@ -333,6 +333,22 @@ def _seed_discovery(workspace):
         )
 
 
+def _seed_conversations(workspace):
+    """Seed a few Ask AI conversations (owner-attributed)."""
+    from apps.ai.data import CONVERSATION_HISTORY
+    from apps.ai.models import Conversation
+
+    Conversation.objects.filter(workspace=workspace).delete()
+    owner = (
+        workspace.memberships.filter(role="owner").select_related("user").first()
+    )
+    user = owner.user if owner else None
+    # Insert in reverse so the first seed entry ends up most-recent (ordering by
+    # -updated_at), matching the Phase 1 history order.
+    for entry in reversed(CONVERSATION_HISTORY):
+        Conversation.objects.create(workspace=workspace, user=user, title=entry["title"])
+
+
 def seed_workspace(workspace, *, now=None):
     """Populate a workspace with the full demo dataset (idempotent)."""
     now = now or timezone.now()
@@ -344,4 +360,5 @@ def seed_workspace(workspace, *, now=None):
     _seed_own_products(workspace, products, now)
     _seed_team(workspace)
     _seed_discovery(workspace)
+    _seed_conversations(workspace)
     return workspace

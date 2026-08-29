@@ -118,11 +118,14 @@ def _is_baseline(competitor, job):
 
 def persist_scan(competitor, items, job=None):
     """persist_hook: upsert listings, write history, detect changes, handle misses."""
+    from apps.changes.significance import is_ai_eligible
+
     now = timezone.now()
     baseline = _is_baseline(competitor, job)
     seen_ids = set()
     changes = 0
     updated = 0
+    ai_eligible = []
 
     for item in items:
         listing, created, previous = upsert_listing(competitor, item.normalized, now=now)
@@ -142,14 +145,27 @@ def persist_scan(competitor, items, job=None):
             listing.last_change_at = now
             listing.save(update_fields=["change_kind", "change_label", "last_change_at"])
         changes += len(events)
+        ai_eligible.extend(e for e in events if e and is_ai_eligible(e))
 
     if not baseline and items:
         changes += _handle_disappearances(competitor, seen_ids, now)
+
+    _enqueue_ai_analyses(ai_eligible)
 
     if job is not None:
         job.changes_detected = (job.changes_detected or 0) + changes
         job.products_updated = (job.products_updated or 0) + updated
     return {"changes": changes, "updated": updated}
+
+
+def _enqueue_ai_analyses(events):
+    """Funnel: only significant events get an (expensive) AI analysis, capped."""
+    if not events:
+        return
+    from apps.ai.tasks import analyse_change
+
+    for event in events[: settings.AI_MAX_ANALYSES_PER_SCAN]:
+        analyse_change.delay(event.id)
 
 
 def _handle_disappearances(competitor, seen_ids, now):

@@ -5,14 +5,13 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from apps.competitors import selectors as competitor_selectors
-from apps.core.store import WorkspaceStore
 
 from . import selectors, services
 from .data import ACTIVITY_SUGGESTIONS, SUGGESTED_QUESTIONS
 
 
 def _base_context(request):
-    return {"conversations": WorkspaceStore(request).get("conversations")}
+    return {"conversations": selectors.list_conversations(request)}
 
 
 def index(request):
@@ -70,13 +69,17 @@ def ask(request):
     )
 
     if question:
-        response = services.resolve_response(question, context)
+        from apps.ai.providers import get_provider
+
+        response = get_provider().answer_question(request.workspace, question, context)
     else:
         response = None
 
     # First message of a fresh conversation creates the history entry.
     if conversation is None and question:
         conversation = services.create_conversation(request, question)
+    if conversation and question:
+        services.record_messages(request, conversation["id"], question, response)
 
     ctx = {
         **_base_context(request),

@@ -1,7 +1,13 @@
 import pytest
+
+from apps.ai.models import Conversation
 from django.urls import reverse
 
 pytestmark = pytest.mark.django_db
+
+
+def _conv_id(workspace, title):
+    return str(Conversation.objects.get(workspace=workspace, title=title).pk)
 
 
 def test_index_renders_empty_state(client):
@@ -11,9 +17,9 @@ def test_index_renders_empty_state(client):
     assert b"Powered by your RivalTracking data" in response.content
 
 
-def test_index_replays_stored_conversation(client):
-    # Seed conversation c1 = "ToyWorld weekly activity" replays a resolved answer.
-    response = client.get(reverse("ai:index"), {"c": "c1"})
+def test_index_replays_stored_conversation(client, workspace):
+    # Seeded "ToyWorld weekly activity" conversation replays a resolved answer.
+    response = client.get(reverse("ai:index"), {"c": _conv_id(workspace, "ToyWorld weekly activity")})
     assert response.status_code == 200
     assert b"ToyWorld weekly activity" in response.content  # user bubble (title)
     assert b"ToyWorld was highly active this week" in response.content  # AI heading
@@ -63,9 +69,10 @@ def test_ask_candidate_short_circuits(client):
     assert b"BrightSpark Toys is not monitored yet" in response.content
 
 
-def test_rename_conversation(client):
+def test_rename_conversation(client, workspace):
     response = client.post(
-        reverse("ai:rename"), {"conversation_id": "c2", "title": "Renamed topic"}
+        reverse("ai:rename"),
+        {"conversation_id": _conv_id(workspace, "Outdoor Toys pricing"), "title": "Renamed topic"},
     )
     assert response.status_code == 200
     assert b"Renamed topic" in response.content
@@ -74,16 +81,20 @@ def test_rename_conversation(client):
     assert b"Renamed topic" in follow.content
 
 
-def test_delete_conversation(client):
-    response = client.post(reverse("ai:delete"), {"conversation_id": "c3"})
+def test_delete_conversation(client, workspace):
+    response = client.post(
+        reverse("ai:delete"),
+        {"conversation_id": _conv_id(workspace, "Compare ToyWorld vs PlayNest")},
+    )
     assert response.status_code == 200
     follow = client.get(reverse("ai:index"))
     assert b"Compare ToyWorld vs PlayNest" not in follow.content
 
 
-def test_delete_active_conversation_redirects(client):
+def test_delete_active_conversation_redirects(client, workspace):
+    cid = _conv_id(workspace, "ToyWorld weekly activity")
     response = client.post(
-        reverse("ai:delete"), {"conversation_id": "c1", "c": "c1"}
+        reverse("ai:delete"), {"conversation_id": cid, "c": cid}
     )
     assert response.status_code == 200
     assert response["HX-Redirect"] == reverse("ai:index")

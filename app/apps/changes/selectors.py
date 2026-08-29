@@ -43,6 +43,7 @@ def event_dict(event, now=None):
     now = now or timezone.now()
     product = event.product
     meta = event.metadata or {}
+    analysis = getattr(event, "analysis", None)
     minutes = _minutes_since(event.detected_at, now)
     source_url = meta.get("source_url") or (event.listing.source_url if event.listing else "")
     return {
@@ -73,14 +74,16 @@ def event_dict(event, now=None):
         "last_scanned": meta.get("last_scanned", ""),
         "difference": event.difference or None,
         "evidence": meta.get("evidence", {}),
-        "ai_note": meta.get("ai_note", ""),
+        "ai_note": (
+            (analysis.why_it_matters or analysis.summary) if analysis else meta.get("ai_note", "")
+        ),
     }
 
 
 def _events_qs(request):
     return (
         ChangeEvent.objects.for_workspace(_workspace(request))
-        .select_related("competitor", "product", "listing")
+        .select_related("competitor", "product", "listing", "analysis")
     )
 
 

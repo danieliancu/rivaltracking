@@ -182,13 +182,32 @@ def build_ai_message(response):
     return message
 
 
-def conversation_by_id(request, conversation_id):
-    from apps.core.store import WorkspaceStore
+def conversation_dict(obj):
+    from apps.core.format import relative_time
+    from django.utils import timezone
 
-    for c in WorkspaceStore(request).get("conversations"):
-        if c["id"] == conversation_id:
-            return c
-    return None
+    minutes = max(0, int((timezone.now() - obj.updated_at).total_seconds() // 60))
+    return {"id": str(obj.pk), "title": obj.title, "when": relative_time(minutes)}
+
+
+def list_conversations(request):
+    from .models import Conversation
+
+    return [
+        conversation_dict(c)
+        for c in Conversation.objects.for_workspace(getattr(request, "workspace", None))
+    ]
+
+
+def conversation_by_id(request, conversation_id):
+    from .models import Conversation
+
+    obj = (
+        Conversation.objects.for_workspace(getattr(request, "workspace", None))
+        .filter(pk=conversation_id)
+        .first()
+    )
+    return conversation_dict(obj) if obj else None
 
 
 def replay_messages(request, conversation):

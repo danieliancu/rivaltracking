@@ -8,9 +8,8 @@ import re
 from copy import deepcopy
 from functools import lru_cache
 
-from apps.core.store import WorkspaceStore
-
 from .data import CANDIDATE_RESPONSE_TEMPLATE, FALLBACK_RESPONSE, RESPONSES
+from .models import Conversation, Message
 
 
 @lru_cache(maxsize=1)
@@ -71,34 +70,44 @@ def resolve_response(question, context=None):
 
 
 # ---------------------------------------------------------------------------
-# Conversation mutations (workspace-store.tsx)
+# Conversation persistence (real Conversation/Message models)
 
 
-def _unique_conversation_id(conversations):
-    """workspace-store.tsx uses a monotonic counter (`c${n}`); we pick the
-    lowest `c{n}` not already taken so ids stay stable and collision-free."""
-    existing = {c["id"] for c in conversations}
-    n = 1
-    while f"c{n}" in existing:
-        n += 1
-    return f"c{n}"
+def _workspace(request):
+    return getattr(request, "workspace", None)
+
+
+def _user(request):
+    user = getattr(request, "user", None)
+    return user if (user is not None and user.is_authenticated) else None
 
 
 def create_conversation(request, question):
-    """Future: POST /api/ai/conversations
-
-    Mirrors addConversation: title truncated to 48 chars with an ellipsis,
-    prepended to the history. `when` is "Just now".
-    """
+    """Future: POST /api/ai/conversations. Title truncated to 48 chars."""
     title = f"{question[:48]}…" if len(question) > 48 else question
-    store = WorkspaceStore(request)
-    conversation = {
-        "id": _unique_conversation_id(store.get("conversations")),
-        "title": title,
-        "when": "Just now",
-    }
-    store.mutate("conversations", lambda items: items.insert(0, conversation))
-    return conversation
+    conversation = Conversation.objects.create(
+        workspace=_workspace(request), user=_user(request), title=title
+    )
+    from .selectors import conversation_dict
+
+    return conversation_dict(conversation)
+
+
+def record_messages(request, conversation_id, question, response):
+    """Persist the user question + AI answer (with citations) for traceability."""
+    conv = Conversation.objects.for_workspace(_workspace(request)).filter(
+        id=conversation_id
+    ).first()
+    if conv is None:
+        return
+    Message.objects.create(conversation=conv, role=Message.Role.USER, content=question)
+    Message.objects.create(
+        conversation=conv,
+        role=Message.Role.AI,
+        content=(response or {}).get("summary", ""),
+        metadata={"response_id": (response or {}).get("id", "")},
+    )
+    conv.save(update_fields=["updated_at"])
 
 
 def rename_conversation(request, conversation_id, title):
@@ -106,30 +115,25 @@ def rename_conversation(request, conversation_id, title):
     title = (title or "").strip()
     if not title:
         return None
-    store = WorkspaceStore(request)
-    found = {"c": None}
+    conv = Conversation.objects.for_workspace(_workspace(request)).filter(
+        id=conversation_id
+    ).first()
+    if conv is None:
+        return None
+    conv.title = title
+    conv.save(update_fields=["title", "updated_at"])
+    from .selectors import conversation_dict
 
-    def _rename(items):
-        for c in items:
-            if c["id"] == conversation_id:
-                c["title"] = title
-                found["c"] = c
-
-    store.mutate("conversations", _rename)
-    return found["c"]
+    return conversation_dict(conv)
 
 
 def delete_conversation(request, conversation_id):
     """Future: DELETE /api/ai/conversations/:id"""
-    store = WorkspaceStore(request)
-    name = next(
-        (c["title"] for c in store.get("conversations") if c["id"] == conversation_id),
-        None,
-    )
-    if name is None:
+    conv = Conversation.objects.for_workspace(_workspace(request)).filter(
+        id=conversation_id
+    ).first()
+    if conv is None:
         return None
-    store.replace(
-        "conversations",
-        [c for c in store.get("conversations") if c["id"] != conversation_id],
-    )
+    name = conv.title
+    conv.delete()
     return name
