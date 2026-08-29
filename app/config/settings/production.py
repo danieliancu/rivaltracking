@@ -45,3 +45,13 @@ DEMO_LOGIN_ENABLED = env("DEMO_LOGIN_ENABLED", default="0") not in ("0", "false"
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# Phase 3: real Redis-backed cache (shared across web + workers) and real
+# Celery workers (not eager). REDIS_URL / CELERY_* come from the environment.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env("CACHE_URL", default=env("REDIS_URL", default="redis://localhost:6379/0")),
+    }
+}
+CELERY_TASK_ALWAYS_EAGER = env("CELERY_TASK_ALWAYS_EAGER", default="0") not in ("0", "false", "False")

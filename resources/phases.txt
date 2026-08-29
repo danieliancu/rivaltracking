@@ -6,3 +6,6 @@ PostgreSQL, users, workspaces, competitors, products, history, permissions.
 
 Etapa 3 — Intelligence engine
 Celery + Redis + scraping workers + matching + AI + alerts + reports.
+
+Etapa 4 — Commercial launch
+Stripe + plans/limits + onboarding + transactional emails + production deployment + backups/monitoring + GDPR/legal + marketing site.

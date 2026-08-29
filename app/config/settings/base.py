@@ -32,6 +32,8 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.accounts",
     "apps.catalogue",
+    "apps.scanning",
+    "apps.matching",
     "apps.dashboard",
     "apps.competitors",
     "apps.products",
@@ -124,3 +126,78 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# ---------------------------------------------------------------------------
+# Phase 3 — processing engine (Celery / Redis / scraping / AI)
+# ---------------------------------------------------------------------------
+
+REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")
+
+# Celery. Eager mode (run tasks inline, no broker) is the default for local dev
+# and tests; real deployments set CELERY_TASK_ALWAYS_EAGER=0 and run workers.
+CELERY_BROKER_URL = env("CELERY_BROKER_URL", default=REDIS_URL)
+CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=REDIS_URL)
+CELERY_TASK_ALWAYS_EAGER = env("CELERY_TASK_ALWAYS_EAGER", default="1") not in ("0", "false", "False")
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = int(env("CELERY_WORKER_PREFETCH_MULTIPLIER", default="1"))
+CELERY_WORKER_CONCURRENCY = int(env("CELERY_WORKER_CONCURRENCY", default="4"))
+CELERY_TASK_DEFAULT_QUEUE = "processing"
+CELERY_TASK_TIME_LIMIT = int(env("CELERY_TASK_TIME_LIMIT", default="600"))
+CELERY_TASK_SOFT_TIME_LIMIT = int(env("CELERY_TASK_SOFT_TIME_LIMIT", default="540"))
+CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 3600}
+CELERY_RESULT_EXTENDED = True
+
+# Route each kind of work to its own queue so heavy scraping/AI never starves
+# lightweight processing. Workers subscribe to the queues they should serve.
+CELERY_TASK_ROUTES = {
+    "apps.scanning.tasks.*": {"queue": "scraping"},
+    "apps.changes.tasks.*": {"queue": "processing"},
+    "apps.catalogue.tasks.*": {"queue": "processing"},
+    "apps.matching.tasks.*": {"queue": "matching"},
+    "apps.ai.tasks.*": {"queue": "ai"},
+    "apps.alerts.tasks.*": {"queue": "alerts"},
+    "apps.reports.tasks.*": {"queue": "reports"},
+}
+
+# Beat: lightweight dispatchers (they enqueue real work, deduped via Redis locks).
+CELERY_BEAT_SCHEDULE = {
+    "dispatch-due-scans": {
+        "task": "apps.scanning.tasks.dispatch_due_scans",
+        "schedule": int(env("SCAN_DISPATCH_INTERVAL", default="60")),
+    },
+    "dispatch-due-report-schedules": {
+        "task": "apps.reports.tasks.dispatch_due_schedules",
+        "schedule": int(env("REPORT_DISPATCH_INTERVAL", default="300")),
+    },
+}
+
+# Cache (also used for per-domain rate-limit leases and scan dedup locks).
+# Local-memory by default so local dev and tests need no Redis; production and
+# demo switch to a shared Redis cache (required for cross-worker locks).
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
+# Scraper controls (all overridable via env; conservative, resource-conscious).
+HTTP_TIMEOUT = float(env("HTTP_TIMEOUT", default="15"))
+HTTP_USER_AGENT = env(
+    "HTTP_USER_AGENT",
+    default="RivalTrackingBot/1.0 (+https://rivaltracking.com/bot)",
+)
+SCAN_MAX_PAGES = int(env("SCAN_MAX_PAGES", default="200"))
+SCAN_MAX_DEPTH = int(env("SCAN_MAX_DEPTH", default="3"))
+SCRAPER_CONCURRENCY = int(env("SCRAPER_CONCURRENCY", default="4"))
+SCRAPER_PER_DOMAIN_RPS = float(env("SCRAPER_PER_DOMAIN_RPS", default="1"))
+SCRAPER_MAX_RETRIES = int(env("SCRAPER_MAX_RETRIES", default="3"))
+LISTING_MISSES_BEFORE_REMOVED = int(env("LISTING_MISSES_BEFORE_REMOVED", default="2"))
+RAW_CAPTURE_RETENTION_DAYS = int(env("RAW_CAPTURE_RETENTION_DAYS", default="30"))
+
+# Optional browser fetcher (Playwright). Off by default; needs the browser image.
+BROWSER_ENABLED = env("BROWSER_ENABLED", default="0") in ("1", "true", "True")
+BROWSER_CONCURRENCY = int(env("BROWSER_CONCURRENCY", default="1"))
+
+# AI provider abstraction. Default "stub" is deterministic and needs no API key.
+AI_PROVIDER = env("AI_PROVIDER", default="stub")
+AI_MODEL = env("AI_MODEL", default="gpt-4o-mini")
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+AI_MAX_ANALYSES_PER_SCAN = int(env("AI_MAX_ANALYSES_PER_SCAN", default="30"))

@@ -1,0 +1,4 @@
+# Optional browser-rendering fetcher (dedicated scraping-worker image only).
+# Install with:  pip install -r requirements/browser.txt && playwright install chromium
+-r base.txt
+playwright>=1.45
