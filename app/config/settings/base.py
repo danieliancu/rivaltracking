@@ -205,3 +205,22 @@ AI_MAX_ANALYSES_PER_SCAN = int(env("AI_MAX_ANALYSES_PER_SCAN", default="30"))
 # Live scanning hits real competitor sites; off locally/in tests (inject a
 # fetcher instead), on in production/demo.
 SCANNING_LIVE = env("SCANNING_LIVE", default="0") in ("1", "true", "True")
+
+
+# Structured-ish logging for the processing engine (debuggable, not a platform).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "engine": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "engine"},
+    },
+    "loggers": {
+        "rivaltracking": {
+            "handlers": ["console"],
+            "level": env("ENGINE_LOG_LEVEL", default="INFO"),
+        },
+    },
+}

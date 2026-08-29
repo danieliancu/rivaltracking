@@ -1,5 +1,6 @@
 """Scan orchestration services (framework only in this commit; the real
 fetch/extract/normalise/persist pipeline is wired in the next commit)."""
+import logging
 from datetime import timedelta
 
 from django.conf import settings
@@ -10,6 +11,8 @@ from django.utils import timezone
 from apps.competitors.models import Competitor
 
 from .models import ScanJob
+
+logger = logging.getLogger("rivaltracking.scanning")
 
 FREQUENCY_HOURS = {
     "Every 24 hours": 24,
@@ -103,6 +106,10 @@ def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
     job.save(update_fields=["status", "started_at"])
 
     competitor = job.competitor
+    logger.info(
+        "scan.started job=%s workspace=%s competitor=%s trigger=%s",
+        job.id, job.workspace_id, competitor.slug, job.trigger_type,
+    )
     try:
         if fetcher is not None or settings.SCANNING_LIVE:
             from .persistence import persist_scan
@@ -139,6 +146,11 @@ def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
     finally:
         job.finished_at = timezone.now()
         job.save()
+        logger.info(
+            "scan.finished job=%s status=%s pages=%s products=%s changes=%s errors=%s",
+            job.id, job.status, job.pages_requested, job.products_found,
+            job.changes_detected, job.errors_count,
+        )
         Competitor.objects.filter(id=competitor.id).update(
             last_scan_at=job.finished_at,
             next_scan_at=next_scan_time(competitor, job.finished_at),
