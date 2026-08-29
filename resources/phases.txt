@@ -1,0 +1,8 @@
+Etapa 1 — Visual clone
+React → Django templates. Totul mock. Aspectul trebuie să fie aproape identic.
+
+Etapa 2 — Product foundation
+PostgreSQL, users, workspaces, competitors, products, history, permissions.
+
+Etapa 3 — Intelligence engine
+Celery + Redis + scraping workers + matching + AI + alerts + reports.
