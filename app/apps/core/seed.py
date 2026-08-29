@@ -388,6 +388,7 @@ def _seed_reports(workspace, now):
     """Seed generated reports + schedules."""
     from apps.reports.data import GENERATED_REPORTS, REPORT_SCHEDULES
     from apps.reports.models import Report, ReportSchedule
+    from apps.reports.services import build_report_sections
 
     Report.objects.filter(workspace=workspace).delete()
     ReportSchedule.objects.filter(workspace=workspace).delete()
@@ -406,6 +407,7 @@ def _seed_reports(workspace, now):
                 "type_title": r.get("type", r["type_id"]),
                 "data_through": r.get("data_through", ""),
                 "ai_analysis": True,
+                "sections": build_report_sections(workspace, "Last 30 days"),
             },
         )
     for s in REPORT_SCHEDULES:

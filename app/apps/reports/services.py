@@ -60,18 +60,14 @@ def generate(report):
 
     ws = report.workspace
     now = timezone.now()
-    metrics = compute_metrics(ws, report.period)
+    sections = build_report_sections(ws, report.period)
     report.config = {
         **(report.config or {}),
-        "metrics": metrics,
+        "metrics": compute_metrics(ws, report.period),
         "data_through": timezone.localtime(now).strftime("%d %b, %H:%M"),
+        "sections": sections,
     }
-    if report.config.get("ai_analysis", True):
-        report.summary = get_provider().generate_report_summary(
-            ws,
-            {"total_changes": metrics["total_changes"],
-             "competitors": Competitor.objects.for_workspace(ws).count()},
-        )
+    report.summary = sections["executive_summary"] if report.config.get("ai_analysis", True) else ""
     report.status = Report.Status.READY
     report.generated_at = now
     report.save()
@@ -155,3 +151,139 @@ def delete_schedule(request, schedule_id):
     ReportSchedule.objects.for_workspace(_workspace(request)).filter(
         pk=_pk(schedule_id)
     ).delete()
+
+
+def build_report_sections(workspace, period):
+    """Full report body computed from real ORM data (+ deterministic narrative).
+
+    Same shape the detail template consumes, but every number traces to this
+    workspace's ChangeEvents/competitors — a fresh workspace yields empty
+    sections, never fabricated market data.
+    """
+    from django.db.models import Count
+    from django.db.models.functions import TruncDate
+
+    from apps.ai.providers import get_provider
+    from apps.changes.models import ChangeEvent
+    from apps.competitors.models import Competitor
+
+    T = ChangeEvent.Type
+    now = timezone.now()
+    since = now - timedelta(days=PERIOD_DAYS.get(period, 7))
+    ev = ChangeEvent.objects.for_workspace(workspace).filter(detected_at__gte=since)
+    m = compute_metrics(workspace, period)
+
+    metrics = [
+        {"id": "changes", "label": "Changes", "value": str(m["total_changes"]), "tone": "info"},
+        {"id": "new", "label": "New products", "value": str(m["new_products"]), "tone": "success"},
+        {"id": "drops", "label": "Price drops", "value": str(m["price_decreases"]), "tone": "success"},
+        {"id": "increases", "label": "Price increases", "value": str(m["price_increases"]), "tone": "danger"},
+        {"id": "stockouts", "label": "Stock-outs", "value": str(m["stock_outs"]), "tone": "warning"},
+        {"id": "promos", "label": "Promotions", "value": str(m["promotions"]), "tone": "purple"},
+    ]
+
+    comparison = []
+    for c in Competitor.objects.for_workspace(workspace):
+        cev = ev.filter(competitor=c)
+        comparison.append({
+            "name": c.name, "products": c.products_count or 0,
+            "new_products": cev.filter(event_type=T.PRODUCT_NEW).count(),
+            "drops": cev.filter(event_type=T.PRICE_DECREASE).count(),
+            "increases": cev.filter(event_type=T.PRICE_INCREASE).count(),
+            "stockouts": cev.filter(event_type=T.STOCK_OUT).count(),
+            "promos": cev.filter(event_type=T.PROMOTION_STARTED).count(),
+            "total": cev.count(),
+        })
+    comparison.sort(key=lambda r: -r["total"])
+
+    def _by_day(qs):
+        return {r["d"]: r["n"] for r in qs.annotate(d=TruncDate("detected_at")).values("d").annotate(n=Count("id"))}
+
+    dec_by_day = _by_day(ev.filter(event_type=T.PRICE_DECREASE))
+    inc_by_day = _by_day(ev.filter(event_type=T.PRICE_INCREASE))
+    days = sorted(set(dec_by_day) | set(inc_by_day))
+    pricing = {
+        "facts": [
+            {"label": "Price decreases", "value": str(m["price_decreases"]), "tone": "text-success"},
+            {"label": "Price increases", "value": str(m["price_increases"]), "tone": "text-destructive"},
+        ],
+        "series": [{"day": f"{d:%d %b}", "decreases": dec_by_day.get(d, 0), "increases": inc_by_day.get(d, 0)} for d in days],
+        "ai_note": "",
+    }
+
+    cats = (
+        ev.exclude(product__isnull=True).exclude(product__category="")
+        .values("product__category").annotate(n=Count("id")).order_by("-n")[:6]
+    )
+    category_comparison = [{"name": r["product__category"], "changes": r["n"]} for r in cats]
+
+    stock_facts = {
+        "title": "Stock Intelligence",
+        "facts": [
+            {"label": "Stock-outs", "value": str(m["stock_outs"])},
+            {"label": "Back in stock", "value": str(ev.filter(event_type=T.STOCK_IN).count())},
+        ],
+        "ai_note": "",
+    }
+    promo_facts = {
+        "title": "Promotion Intelligence",
+        "facts": [
+            {"label": "Newly detected", "value": str(m["promotions"])},
+            {"label": "Ended", "value": str(ev.filter(event_type=T.PROMOTION_ENDED).count())},
+        ],
+        "ai_note": "",
+    }
+    catalogue_facts = {
+        "title": "Catalogue Intelligence",
+        "facts": [
+            {"label": "New products", "value": str(m["new_products"])},
+            {"label": "Removed products", "value": str(ev.filter(event_type=T.PRODUCT_REMOVED).count())},
+        ],
+        "ai_note": "",
+    }
+
+    developments = []
+    for i, row in enumerate(comparison[:3], start=1):
+        if row["total"] < 1:
+            continue
+        developments.append({
+            "rank": i,
+            "title": f"{row['name']} led activity",
+            "facts": [f"{row['total']} changes", f"{row['drops']} price drops", f"{row['stockouts']} stock-outs"],
+            "evidence": {"label": f"View {row['total']} changes", "to": f"/changes?range=7d"},
+            "tone": "bg-info/10 text-info",
+        })
+
+    risks, opportunities, actions = [], [], []
+    if comparison and comparison[0]["drops"]:
+        top = comparison[0]
+        risks.append(f"{top['name']} is applying pricing pressure with {top['drops']} price reductions in the period.")
+        actions.append("Review your pricing on the affected products and decide whether to respond.")
+    if m["stock_outs"]:
+        opportunities.append(f"Competitors recorded {m['stock_outs']} stock-outs — an opportunity to capture demand while they cannot fulfil it.")
+
+    provider = get_provider()
+    exec_summary = provider.generate_report_summary(
+        workspace, {"total_changes": m["total_changes"], "competitors": len(comparison)}
+    )
+    key_takeaway = (
+        f"{m['total_changes']} tracked changes across {len(comparison)} competitors this period."
+        if m["total_changes"] else
+        "Not enough data collected yet for this period — connect competitors and run scans."
+    )
+
+    return {
+        "metrics": metrics,
+        "competitor_comparison": comparison,
+        "pricing": pricing,
+        "category_comparison": category_comparison,
+        "stock": stock_facts,
+        "promotions": promo_facts,
+        "catalogue": catalogue_facts,
+        "developments": developments,
+        "opportunities": opportunities,
+        "risks": risks,
+        "recommended_actions": actions,
+        "executive_summary": exec_summary,
+        "key_takeaway": key_takeaway,
+    }

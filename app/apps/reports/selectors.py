@@ -10,9 +10,7 @@ from .models import Report, ReportSchedule
 from .data import (
     GENERATION_STAGES,
     REPORT_FORM_OPTIONS,
-    REPORT_KPIS,
     REPORT_TYPES,
-    WEEKLY_REPORT,
 )
 
 # reports.tsx kpiIcons — id → lucide glyph.
@@ -41,8 +39,26 @@ FREQUENCY_LABELS = {
 }
 
 
-def kpi_cards():
-    return [{**k, "icon": KPI_ICONS.get(k["id"], "file-bar-chart-2")} for k in REPORT_KPIS]
+def kpi_cards(request):
+    from apps.competitors import selectors as competitor_selectors
+
+    ws = _workspace(request)
+    reports = Report.objects.for_workspace(ws)
+    latest = reports.exclude(generated_at=None).order_by("-generated_at").first()
+    latest_val = "—"
+    if latest and latest.generated_at:
+        mins = max(0, int((timezone.now() - latest.generated_at).total_seconds() // 60))
+        latest_val = relative_time(mins)
+    values = [
+        ("generated", "Reports generated", str(reports.count()), "info"),
+        ("scheduled", "Scheduled reports", str(ReportSchedule.objects.for_workspace(ws).filter(enabled=True).count()), "purple"),
+        ("covered", "Competitors covered", str(len(competitor_selectors.header_list(request))), "teal"),
+        ("latest", "Latest report", latest_val, "success"),
+    ]
+    return [
+        {"id": i, "label": label, "value": value, "tone": tone, "icon": KPI_ICONS.get(i, "file-bar-chart-2")}
+        for i, label, value, tone in values
+    ]
 
 
 def report_types():
@@ -216,9 +232,24 @@ def schedule_form_context(initial, schedule=None):
 # Report details (body always renders the detailed weekly dataset, as the
 # prototype does — header metadata comes from the actual report record)
 
-def detail_charts():
-    pricing = WEEKLY_REPORT["pricing"]["series"]
-    categories = WEEKLY_REPORT["category_comparison"]
+def empty_sections():
+    return {
+        "metrics": [], "competitor_comparison": [], "pricing": {"facts": [], "series": [], "ai_note": ""},
+        "category_comparison": [], "stock": {"title": "Stock Intelligence", "facts": [], "ai_note": ""},
+        "promotions": {"title": "Promotion Intelligence", "facts": [], "ai_note": ""},
+        "catalogue": {"title": "Catalogue Intelligence", "facts": [], "ai_note": ""},
+        "developments": [], "opportunities": [], "risks": [], "recommended_actions": [],
+        "executive_summary": "", "key_takeaway": "",
+    }
+
+
+def report_sections(report_obj):
+    return (report_obj.config or {}).get("sections") or empty_sections()
+
+
+def detail_charts(sections):
+    pricing = sections["pricing"]["series"]
+    categories = sections["category_comparison"]
     return {
         "pricing": {
             "type": "line",
@@ -238,10 +269,10 @@ def detail_charts():
     }
 
 
-def detail_metrics():
+def detail_metrics(sections):
     return [
         {**m, "icon": METRIC_ICONS.get(m["id"], "git-compare-arrows")}
-        for m in WEEKLY_REPORT["metrics"]
+        for m in sections["metrics"]
     ]
 
 
@@ -253,7 +284,7 @@ def ask_ai_href(report):
 # ---------------------------------------------------------------------------
 # CSV export — port of lib/report-csv.ts (weekly dataset as the mock body)
 
-def report_csv_rows(report):
+def report_csv_rows(report, sections):
     """Header + rows for the CSV export. Future: GET /api/reports/:id/export"""
     headers = ["Section", "Item", "Value", "", "", "", "", ""]
     meta = [
@@ -264,7 +295,7 @@ def report_csv_rows(report):
         ["Data through", report["data_through"]],
         [],
     ]
-    metrics = [["Metric", m["label"], m["value"]] for m in WEEKLY_REPORT["metrics"]]
+    metrics = [["Metric", m["label"], m["value"]] for m in sections["metrics"]]
     comparison = [
         [
             "Competitor",
@@ -276,6 +307,6 @@ def report_csv_rows(report):
             f"stockouts={c['stockouts']}",
             f"promos={c['promos']}",
         ]
-        for c in WEEKLY_REPORT["competitor_comparison"]
+        for c in sections["competitor_comparison"]
     ]
     return headers, [*meta, *metrics, *comparison]

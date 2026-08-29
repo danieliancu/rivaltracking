@@ -7,7 +7,7 @@ from django.views.decorators.http import require_POST
 from django_htmx.http import HttpResponseClientRedirect
 from django.urls import reverse
 
-from .data import GENERATION_STAGES, REPORT_FORM_OPTIONS, WEEKLY_REPORT
+from .data import GENERATION_STAGES, REPORT_FORM_OPTIONS
 from . import selectors, services
 
 
@@ -21,7 +21,7 @@ def _scheduled_context(request, toast=None):
 
 def index(request):
     context = {
-        "kpis": selectors.kpi_cards(),
+        "kpis": selectors.kpi_cards(request),
         "library": selectors.report_types(),
         **_generated_context(request),
         **_scheduled_context(request),
@@ -140,10 +140,15 @@ def download_pdf(request, report_id):
 
 def export_csv(request, report_id):
     """CSV export — port of lib/report-csv.ts + lib/csv.ts."""
-    report = selectors.by_id(request, report_id)
-    if report is None:
+    from .models import Report
+
+    obj = Report.objects.for_workspace(request.workspace).filter(
+        pk=selectors._pk(report_id)
+    ).first()
+    if obj is None:
         raise Http404
-    headers, rows = selectors.report_csv_rows(report)
+    report = selectors.report_dict(obj)
+    headers, rows = selectors.report_csv_rows(report, selectors.report_sections(obj))
     buffer = io.StringIO()
     writer = csv.writer(buffer, lineterminator="\n")  # quotes on , " \n like csv.ts
     writer.writerow(headers)
@@ -272,17 +277,31 @@ def delete_schedule(request, schedule_id):
 # Report details
 
 def detail(request, report_id):
-    report = selectors.by_id(request, report_id)
-    if report is None:
+    from .models import Report
+
+    obj = Report.objects.for_workspace(request.workspace).filter(
+        pk=selectors._pk(report_id)
+    ).first()
+    if obj is None:
         return render(request, "reports/detail.html", {"report": None})
+    report = selectors.report_dict(obj)
+    sections = selectors.report_sections(obj)
+    r = {
+        **sections,
+        "title": report["name"],
+        "period": report["period"],
+        "competitors": report["competitors"],
+        "generated": report["created"],
+        "data_through": report["data_through"],
+    }
     return render(
         request,
         "reports/detail.html",
         {
             "report": report,
-            "r": WEEKLY_REPORT,
-            "metrics": selectors.detail_metrics(),
-            "charts": selectors.detail_charts(),
+            "r": r,
+            "metrics": selectors.detail_metrics(sections),
+            "charts": selectors.detail_charts(sections),
             "ask_ai_href": selectors.ask_ai_href(report),
         },
     )
