@@ -264,3 +264,69 @@ active/status and product identifiers.
 Real Playwright rendering, image thumbnail/object-storage wiring, PDF export,
 semantic/embedding matching, proxy pool, Stripe/plan enforcement. Live crawling
 is validated against fixtures — tests never hit the network or live AI.
+
+## Phase 3.5 — usable intelligence loop & no production mock data
+
+Phase 3.5 closes the last gap between the engine and a real first-time user, and
+removes every remaining invented business fact from production. The layering and
+UI are unchanged; the same `View → Selector → Template` path now renders **only**
+workspace-scoped ORM data — rich for the seeded demo, empty for a fresh account.
+
+### Own catalogue (the customer's own store)
+
+- **`catalogue.OwnCatalogueSource`** (one per workspace × source_type
+  `website`/`csv`/`api`): holds `website_url`/`domain`, `status`, `last_import_at`,
+  `products_found`, `errors_count`, `error_summary` and a `config` JSON.
+- **`apps/catalogue/importing.py`** reuses the Phase 3 scraping pipeline against
+  the *own* site: `select_adapter` + `adapter.discover(source)` (duck-typed on
+  `.website_url`/`.domain`) + `orchestration.scrape_url` (already
+  Competitor-agnostic) → normalise → upsert `OwnProduct`/`OwnListing`
+  (channel `website`). It runs on the `processing` queue
+  (`apps/catalogue/tasks.py::import_catalogue`) and is fetcher-injectable for
+  tests. **The own site is never a `Competitor`.**
+- **`apps/catalogue/csv_import.py`** auto-maps headers, validates rows, and
+  upserts the same models (channel `csv`). **`apps/catalogue/api.py::ingest`** is
+  a token-authed (`X-Api-Token` on `WorkspaceSettings`) upsert seam at
+  `POST /catalogue/api/ingest/`.
+- Every imported `OwnProduct` is matched with
+  `apps/matching/engine.py::match_own_product` (GTIN → MPN+brand → SKU → title);
+  when nothing matches it creates the canonical `Product` so later competitor
+  listings converge onto it.
+
+### Comparison (deterministic, no AI)
+
+`apps/catalogue/selectors.py` derives, per matched product, our price vs the
+competitor market (lowest/highest/median/average, `position`,
+`diff_vs_lowest_pct`, in-stock competitors), plus workspace-level
+`catalogue_gaps` (competitors sell, we don't), `unmatched_own_products` (we sell,
+competitors don't) and an `own_position_summary`. These feed Overview, Products,
+Reports and the Ask AI market-position path — all zero/empty for a new workspace.
+
+### No production mock data
+
+For a normal workspace, no selector emits invented facts. The Phase 1
+`apps/*/data.py` business corpora are no longer imported by production code
+(reports KPIs & detail body, products/changes/alerts charts, the competitors
+activity feed, discovery reference profile, AI-insight prose and Ask AI's canned
+answers were all replaced by ORM-derived selectors). `StubProvider.answer_question`
+now answers from real workspace facts or returns a *"not enough data collected
+yet"* card — it never fabricates business facts. Genuinely-static UI config
+(labels, cluster names, report-type library, suggested prompts) stays as
+constants with no company names or counts. Demo richness is produced solely by
+`seed_demo` populating real rows, so the derive-from-ORM selectors render it.
+
+Guardrails: `apps/accounts/tests/test_empty_workspace.py` asserts a fresh signup
+renders every page with zero demo data and the no-data Ask AI card;
+`apps/core/tests/test_no_mock_dependency.py` asserts production modules import no
+legacy business seeds and contain no demo company names;
+`apps/catalogue/tests/test_e2e.py` drives connect → import → scan → match →
+real price position offline.
+
+### Discovery & live validation
+
+Discovery generates candidates only through a pluggable `SearchProvider` seam
+(stub returns none → empty state); **add-competitor-by-URL** is the primary path
+and is surfaced from the empty state. Scoring uses real catalogue/brand/category
+overlap. The scraper is validated against real sites with
+`python manage.py scan_url <url>` (respects `robots.txt`, no CAPTCHA bypass);
+the automated suite never hits the network.

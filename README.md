@@ -121,6 +121,19 @@ Ask AI / Reports / Overview read the resulting real data.
 Deterministic before AI, HTTP before browser, structured data before DOM,
 events before AI — AI only interprets structured results.
 
+### Validating the engine against a real site
+
+Tests never touch the network. To sanity-check the scraper against an ordinary
+public store, use the management command (respects `robots.txt`; no CAPTCHA
+bypass):
+
+```bash
+python manage.py scan_url https://example-store.com/some-product
+```
+
+It prints the discovered/normalised product fields so you can confirm the
+adapters parse a given site before enabling live scans (`SCANNING_LIVE=1`).
+
 ## Deploying with PostgreSQL (Coolify)
 
 The Phase 1 demo ran on SQLite. To run Phase 2 against a Coolify PostgreSQL
@@ -180,6 +193,40 @@ After deploy: `python manage.py migrate` (automatic), then `python manage.py
 seed_demo` once for the demo workspace. Recommended minimum: 1 web, 1 worker
 (concurrency 2-4), 1 beat, Redis, Postgres; scale workers per queue as scan
 volume grows. Health check: `GET /accounts/login/` (200).
+
+## Implementation status (Phase 3.5 — usable intelligence loop)
+
+Phase 3.5 makes the app usable end-to-end for a **brand-new, non-seeded** user
+and removes every remaining invented business fact from production.
+
+- **Connect your own catalogue** (Settings → *Connect your catalogue*), backed
+  by real imports:
+  - **Website** — crawls your own store with the same scraping pipeline used for
+    competitors (`apps/catalogue/importing.py`), upserting `OwnProduct` /
+    `OwnListing`; shows status, last import, products found and errors, with
+    **re-scan** and **disconnect**. Your own site is **never** a competitor.
+  - **CSV** — upload and auto-map `sku,title,url,price,brand,gtin,ean,mpn`
+    (`apps/catalogue/csv_import.py`), validate per row, upsert and match.
+  - **API** — a token-authed ingest seam (`POST /catalogue/api/ingest/`, the
+    workspace API token lives on `WorkspaceSettings`) for programmatic upserts.
+- **Own-vs-competitor comparison from real data**: each `OwnProduct` matches to
+  a canonical `Product` (`apps/matching/engine.py::match_own_product`); the
+  deterministic `apps/catalogue/selectors.py` derive our price vs the market
+  (lowest/highest/median, position, %diff), catalogue **gaps** (competitors sell,
+  we don't) and **unmatched** own products (we sell, competitors don't). These
+  feed Overview, Products, Reports and Ask AI.
+- **First-user flow with no dead ends**: sign up → empty workspace → connect
+  website / import CSV → add a competitor (by URL) or run discovery → scan →
+  match → comparison → changes/insights → Ask AI / report / alert.
+- **No production mock data.** For a normal workspace every visible business
+  fact — competitors, products, prices, changes, alerts, reports, discovery, KPIs,
+  charts, Ask AI answers — is derived from that workspace's own DB/scan/AI
+  results. A fresh workspace shows zeros and empty states; Ask AI returns an
+  honest *"not enough data collected yet"* card. Fabricated demo richness comes
+  **only** from `seed_demo` / test fixtures (which populate real rows, so the
+  same derive-from-ORM selectors render rich for the demo and empty for a new
+  account). A regression suite asserts a fresh signup exposes no demo data and
+  that production code imports no legacy business seeds.
 
 ## Implementation status (Phase 3 — intelligence engine)
 
