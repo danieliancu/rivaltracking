@@ -111,7 +111,7 @@ def compare(request, slug):
         {
             "d": d,
             "products_display": f"{d['catalogue_profile']['products']:,}",
-            "toyworld": selectors.TOYWORLD_PROFILE,
+            "reference": selectors.reference_profile(request),
         },
     )
 

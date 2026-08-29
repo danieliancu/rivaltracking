@@ -13,12 +13,27 @@ DISCOVERY_TONES = {
     "orange": "bg-warning/10 text-warning",
 }
 
-TOYWORLD_PROFILE = {
-    "name": "ToyWorld.co.uk",
-    "products": "2,438",
-    "price_band": "£5 – £250",
-    "categories": "Outdoor Toys · Construction Toys · Educational Toys",
-}
+def reference_profile(request):
+    """Derived 'your catalogue' reference for the compare drawer (real data)."""
+    from apps.catalogue.models import Product, ProductListing
+
+    ws = getattr(request, "workspace", None)
+    products = Product.objects.for_workspace(ws).count()
+    cats = list(
+        Product.objects.for_workspace(ws).exclude(category="")
+        .values_list("category", flat=True).distinct()[:3]
+    )
+    prices = list(
+        ProductListing.objects.for_workspace(ws).exclude(current_price=None)
+        .values_list("current_price", flat=True)
+    )
+    band = f"£{min(prices):.0f} – £{max(prices):.0f}" if prices else "—"
+    return {
+        "name": "Your catalogue",
+        "products": f"{products:,}",
+        "price_band": band,
+        "categories": " · ".join(cats) or "—",
+    }
 
 
 def _workspace(request):

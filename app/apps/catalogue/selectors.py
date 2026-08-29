@@ -76,3 +76,29 @@ def catalogue_gaps(workspace):
         .distinct()
     )
     return gaps
+
+
+def unmatched_own_products(workspace):
+    """Own products we sell that no competitor lists (matched product has no
+    active competitor listings)."""
+    from .models import OwnProduct
+
+    result = []
+    for op in OwnProduct.objects.for_workspace(workspace).select_related("product"):
+        if op.product is None or not ProductListing.objects.filter(
+            product=op.product, active=True
+        ).exists():
+            result.append(op)
+    return result
+
+
+def own_position_summary(workspace):
+    """Headline own-vs-market counts for the Overview (all zero when empty)."""
+    positions = [p for p in workspace_price_positions(workspace) if p["our_price"] is not None and p["competitors"]]
+    return {
+        "matched": len(positions),
+        "cheapest": sum(1 for p in positions if p["position"] == "cheapest"),
+        "most_expensive": sum(1 for p in positions if p["position"] == "most_expensive"),
+        "gaps": catalogue_gaps(workspace).count(),
+        "unmatched": len(unmatched_own_products(workspace)),
+    }

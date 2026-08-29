@@ -388,5 +388,4 @@ SAVED_VIEWS = [
     {"id": "stock", "label": "Stock Problems", "filters": {"kind": "oos"}},
     {"id": "new", "label": "New Products", "filters": {"kind": "new"}},
     {"id": "promos", "label": "Promotions", "filters": {"kind": "promo"}},
-    {"id": "toyworld", "label": "ToyWorld Activity", "filters": {"competitor": "ToyWorld.co.uk"}},
 ]

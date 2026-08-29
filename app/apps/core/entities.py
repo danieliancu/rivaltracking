@@ -3,7 +3,7 @@ import re
 
 
 def slugify(value):
-    """ToyWorld.co.uk or https://www.toyworld.co.uk/x -> toyworld-co-uk."""
+    """Example.co.uk or https://www.example.co.uk/x -> example-co-uk."""
     value = re.sub(r"^https?://", "", value.strip().lower())
     value = re.sub(r"^www\.", "", value)
     value = value.split("/")[0]

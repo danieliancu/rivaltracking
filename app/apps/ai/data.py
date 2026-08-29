@@ -20,32 +20,20 @@ SUGGESTED_QUESTIONS = [
     {"category": "Pricing", "question": "Which competitors reduced prices this week?"},
     {"category": "Products", "question": "What new products have appeared recently?"},
     {"category": "Stock", "question": "Where are competitors having stock problems?"},
-    {"category": "Strategy", "question": "Is ToyWorld showing signs of a pricing campaign?"},
+    {"category": "Strategy", "question": "Is any competitor running a pricing campaign?"},
     {"category": "Opportunities", "question": "Find potential gaps in competitor catalogues."},
 ]
 
 ACTIVITY_SUGGESTIONS = [
-    {
-        "title": "ToyWorld pricing spike",
-        "detail": "67 changes detected",
-        "cta": "Ask what changed",
-        "prompt": "What changed at ToyWorld this week?",
-        "tone": "bg-success/10 text-success",
-    },
-    {
-        "title": "Educational Toys expansion",
-        "detail": "14 new products detected at PlayNest",
-        "cta": "Analyse",
-        "prompt": "What new products have appeared recently?",
-        "tone": "bg-info/10 text-info",
-    },
-    {
-        "title": "Stock activity",
-        "detail": "18 products unavailable at HappyToyHouse",
-        "cta": "Investigate",
-        "prompt": "Where are competitors having stock problems?",
-        "tone": "bg-warning/10 text-warning",
-    },
+    {"title": "Recent pricing activity", "detail": "Review this week's price changes",
+     "prompt": "Which competitors changed prices this week?", "cta": "Analyse",
+     "tone": "bg-success/10 text-success"},
+    {"title": "New products", "detail": "See newly detected products",
+     "prompt": "What new products have appeared recently?", "cta": "Explore",
+     "tone": "bg-info/10 text-info"},
+    {"title": "Stock activity", "detail": "Check competitor stock problems",
+     "prompt": "Where are competitors having stock problems?", "cta": "Investigate",
+     "tone": "bg-warning/10 text-warning"},
 ]
 
 CONVERSATION_HISTORY = [
