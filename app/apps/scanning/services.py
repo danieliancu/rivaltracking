@@ -126,6 +126,10 @@ def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
                 if outcome.errors and not outcome.products_found
                 else ScanJob.Status.COMPLETED
             )
+            if outcome.products_found and job.status != ScanJob.Status.FAILED:
+                from apps.matching.tasks import match_competitor_listings
+
+                match_competitor_listings.delay(competitor.id)
         else:
             job.status = ScanJob.Status.COMPLETED
     except Exception as exc:  # defensive: a scan failure never breaks other work
