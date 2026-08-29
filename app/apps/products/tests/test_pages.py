@@ -2,9 +2,17 @@
 import pytest
 from django.urls import reverse
 
-from apps.core.mock.store import SESSION_KEY
+from apps.products.models import WatchlistItem
 
 pytestmark = pytest.mark.django_db
+
+
+def _watchlist_slugs(workspace):
+    return sorted(
+        WatchlistItem.objects.filter(workspace=workspace).values_list(
+            "product__slug", flat=True
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -21,8 +29,8 @@ def test_index_renders_landmarks(client):
     assert "Most Active Categories" in html
     assert "Product Catalogue" in html
     assert "LEGO Castle Set" in html
-    # KPI row
-    assert "Total products" in html and "8,746" in html
+    # KPI row — values are now derived from the ORM (10 seeded products).
+    assert "Total products" in html and ">10<" in html
 
 
 def test_index_filters_by_query_and_competitor(client):
@@ -184,31 +192,28 @@ def test_compare_selected(client):
 # ---------------------------------------------------------------------------
 # Watchlist mutations
 
-def test_watchlist_toggle(client):
+def test_watchlist_toggle(client, workspace):
     url = reverse("products:watchlist_toggle", kwargs={"slug": "lego-castle-set"})
     response = client.post(url)
     html = response.content.decode()
     assert response.status_code == 200
     assert "Added to watchlist" in html
     assert "fill-current" in html
-    assert client.session[SESSION_KEY]["watchlist"] == ["lego-castle-set"]
+    assert _watchlist_slugs(workspace) == ["lego-castle-set"]
 
     html = client.post(url).content.decode()
     assert "Removed from watchlist" in html
-    assert client.session[SESSION_KEY]["watchlist"] == []
+    assert _watchlist_slugs(workspace) == []
 
 
-def test_watchlist_bulk_add(client):
+def test_watchlist_bulk_add(client, workspace):
     url = reverse("products:watchlist_add")
     response = client.post(url, {"selected": ["lego-castle-set", "stem-robot-kit"]})
     html = response.content.decode()
     assert response.status_code == 200
     assert "2 products added to watchlist" in html
     assert 'id="products-table"' in html
-    assert sorted(client.session[SESSION_KEY]["watchlist"]) == [
-        "lego-castle-set",
-        "stem-robot-kit",
-    ]
+    assert _watchlist_slugs(workspace) == ["lego-castle-set", "stem-robot-kit"]
 
     html = client.post(url, {"selected": ["lego-castle-set"]}).content.decode()
     assert "Already on your watchlist" in html

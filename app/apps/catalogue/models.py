@@ -45,6 +45,10 @@ class Product(models.Model):
     tone = models.CharField(max_length=20, blank=True)
     icon = models.CharField(max_length=40, blank=True)
 
+    # Cross-competitor match quality. Real matching is Phase 3; seeded for now.
+    match_confidence = models.PositiveIntegerField(null=True, blank=True)
+    match_insight = models.CharField(max_length=400, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

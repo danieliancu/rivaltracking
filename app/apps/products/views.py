@@ -56,7 +56,7 @@ def index(request):
     context = {
         **state,
         "table_url": reverse("products:index"),
-        "kpis": selectors.kpi_cards(),
+        "kpis": selectors.kpi_cards(request),
         "price_movement": selectors.price_movement_card(),
         "categories_chart": selectors.active_categories_chart(),
         "filter_options": selectors.filter_options(request),

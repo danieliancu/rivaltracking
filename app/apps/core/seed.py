@@ -116,6 +116,7 @@ def _seed_products(workspace, competitors, now):
     primary_listing = {}
 
     for row in PRODUCTS:
+        matched = row.get("matched") or {}
         product = Product.objects.create(
             workspace=workspace,
             name=row["name"],
@@ -125,6 +126,8 @@ def _seed_products(workspace, competitors, now):
             tone=row.get("tone") or "",
             icon=icons.get(row["slug"], "package"),
             image_url=row.get("image") or "",
+            match_confidence=matched.get("confidence"),
+            match_insight=matched.get("insight", ""),
         )
         products[row["slug"]] = product
 
