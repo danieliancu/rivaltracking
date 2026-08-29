@@ -13,6 +13,7 @@ urlpatterns = [
     path("reports/", include("apps.reports.urls")),
     path("ask-ai/", include("apps.ai.urls")),
     path("settings/", include("apps.settings_app.urls")),
+    path("catalogue/", include("apps.catalogue.urls")),
     path("", include("apps.core.urls")),
 ]
 

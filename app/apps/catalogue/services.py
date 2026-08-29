@@ -1,10 +1,12 @@
-"""Change-aware history writes for listings.
+"""Change-aware history writes for listings + own-catalogue connection helpers.
 
 Snapshots are only written when the value actually changed (or no snapshot
 exists yet), so identical values on every scan don't create meaningless rows
 while charts still get every real movement.
 """
 from __future__ import annotations
+
+from decimal import Decimal, InvalidOperation
 
 from django.utils import timezone
 
@@ -164,3 +166,53 @@ def disconnect_source(workspace, source_type="website"):
         return
     OwnProduct.objects.filter(workspace=workspace, source=source).delete()
     source.delete()
+
+
+def upsert_own_product_dict(workspace, data, *, source=None):
+    """Upsert one OwnProduct from a plain dict (API/CSV shared path) + match."""
+    from apps.core.entities import slugify
+    from apps.matching.engine import match_own_product
+
+    from .models import OwnListing, OwnProduct
+
+    sku = (str(data.get("sku") or "").strip() or slugify(str(data.get("name") or "")))[:80]
+    if not sku:
+        return None, "missing sku/name"
+    price = data.get("price")
+    try:
+        price = None if price in (None, "") else Decimal(str(price))
+    except (InvalidOperation, TypeError):
+        price = None
+    own, created = OwnProduct.objects.update_or_create(
+        workspace=workspace,
+        own_sku=sku,
+        defaults={
+            "name": (str(data.get("name") or sku))[:200],
+            "brand": (str(data.get("brand") or ""))[:120],
+            "gtin": (str(data.get("gtin") or ""))[:14],
+            "ean": (str(data.get("ean") or ""))[:14],
+            "mpn": (str(data.get("mpn") or ""))[:80],
+            "category": (str(data.get("category") or ""))[:120],
+            "our_price": price,
+            "currency": (str(data.get("currency") or "GBP"))[:3].upper(),
+            "source": source,
+        },
+    )
+    url = str(data.get("url") or "").strip()
+    if url:
+        OwnListing.objects.update_or_create(
+            workspace=workspace, own_product=own, channel="api",
+            defaults={"url": url[:500], "price": own.our_price, "currency": own.currency},
+        )
+    match_own_product(own)
+    return own, None if created else "updated"
+
+
+def ensure_api_token(workspace):
+    import secrets
+
+    s = workspace.settings
+    if not s.api_token:
+        s.api_token = secrets.token_urlsafe(32)
+        s.save(update_fields=["api_token", "updated_at"])
+    return s.api_token

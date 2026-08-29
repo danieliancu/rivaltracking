@@ -128,6 +128,9 @@ class WorkspaceSettings(models.Model):
     reports = models.JSONField(default=dict, blank=True)
     retention = models.JSONField(default=dict, blank=True)
 
+    # Token for the catalogue ingestion API (generated on demand).
+    api_token = models.CharField(max_length=64, blank=True, db_index=True)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
