@@ -1,0 +1,54 @@
+{% extends "accounts/auth_base.html" %}
+{% block title %}Create account — RivalTracking{% endblock %}
+
+{% block auth_content %}
+<h1 class="text-xl font-bold">Create your account</h1>
+<p class="mt-1 text-sm text-muted-foreground">Start monitoring competitors in minutes.</p>
+
+<form method="post" class="mt-6 flex flex-col gap-4">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{{ form.non_field_errors.0 }}</div>
+  {% endif %}
+  <div class="grid grid-cols-2 gap-3">
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-semibold">First name</span>
+      <input type="text" name="first_name" value="{{ form.first_name.value|default:'' }}" autocomplete="given-name"
+             class="h-10 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+    </label>
+    <label class="flex flex-col gap-1.5">
+      <span class="text-xs font-semibold">Last name</span>
+      <input type="text" name="last_name" value="{{ form.last_name.value|default:'' }}" autocomplete="family-name"
+             class="h-10 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+    </label>
+  </div>
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-semibold">Work email</span>
+    {% if form.email.errors %}<span class="text-xs text-destructive">{{ form.email.errors.0 }}</span>{% endif %}
+    <input type="email" name="email" value="{{ form.email.value|default:'' }}" required autocomplete="email"
+           class="h-10 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+  </label>
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-semibold">Workspace name <span class="font-normal text-muted-foreground">(optional)</span></span>
+    <input type="text" name="workspace_name" value="{{ form.workspace_name.value|default:'' }}" placeholder="Acme Toys Ltd"
+           class="h-10 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+  </label>
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-semibold">Password</span>
+    {% if form.password2.errors %}<span class="text-xs text-destructive">{{ form.password2.errors.0 }}</span>{% endif %}
+    <input type="password" name="password1" required autocomplete="new-password"
+           class="h-10 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+  </label>
+  <label class="flex flex-col gap-1.5">
+    <span class="text-xs font-semibold">Confirm password</span>
+    <input type="password" name="password2" required autocomplete="new-password"
+           class="h-10 rounded-lg border border-input bg-card px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50">
+  </label>
+  <button type="submit"
+          class="inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground shadow-md shadow-primary/25 transition-colors hover:bg-primary/90">
+    Create account
+  </button>
+</form>
+<p class="mt-6 text-center text-sm text-muted-foreground">Already have an account?
+  <a href="{% url 'accounts:login' %}" class="font-semibold text-primary hover:underline">Sign in</a></p>
+{% endblock %}

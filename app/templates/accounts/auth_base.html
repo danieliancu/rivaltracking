@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{# Standalone shell for signed-out pages: no sidebar/header, centred card. #}
+{% block shell %}
+<div class="relative flex min-h-svh w-full flex-col items-center justify-center bg-background px-4 py-10">
+  <div class="mb-6 flex items-center gap-2">
+    <span class="flex size-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-purple text-primary-foreground">◆</span>
+    <span class="text-lg font-extrabold tracking-tight">RivalTracking</span>
+  </div>
+  <div class="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm sm:p-8">
+    {% block auth_content %}{% endblock %}
+  </div>
+  <p class="mt-6 text-center text-xs text-muted-foreground">{% block auth_footer %}Competitor intelligence for e-commerce{% endblock %}</p>
+</div>
+{% endblock %}

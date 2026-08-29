@@ -39,7 +39,12 @@ def _scan_context(request, store):
 
 
 def shell(request):
-    store = MockStore(request)
+    user = getattr(request, "user", None)
+    # Signed-out pages (login/signup/reset) render a standalone shell that does
+    # not use any of this context, so keep it minimal and touch no tenant data.
+    if user is None or not user.is_authenticated:
+        return {"ranges": RANGES, "date_range": "30d"}
+
     path = request.path
 
     nav_items = []
@@ -48,6 +53,7 @@ def shell(request):
         active = path == "/" if url == "/" else path.startswith(url)
         nav_items.append({"label": label, "icon": icon, "url": url, "active": active})
 
+    store = MockStore(request)
     try:
         recent_alerts = store.get("recent_alerts")
         unread = sum(1 for a in recent_alerts if a["status"] == "new")
@@ -65,4 +71,6 @@ def shell(request):
         "date_range": request.session.get("date_range", "30d"),
         "header_competitors": competitors,
         "scan_context": scan_context,
+        "current_workspace": getattr(request, "workspace", None),
+        "current_membership": getattr(request, "membership", None),
     }

@@ -58,16 +58,12 @@ def _mark_scanned(rows, name):
 
 @require_POST
 def sign_out(request):
-    """Authentication arrives in a later phase — honest placeholder."""
-    return render(
-        request,
-        "partials/toast.html",
-        {
-            "variant": "info",
-            "title": "Authentication is not connected yet",
-            "description": "Sign-in and sign-out arrive with the Django backend.",
-        },
-    )
+    """Legacy sign-out endpoint — now a real logout (header posts to accounts:logout)."""
+    from django.contrib.auth import logout
+    from django.shortcuts import redirect
+
+    logout(request)
+    return redirect("accounts:login")
 
 
 @require_POST

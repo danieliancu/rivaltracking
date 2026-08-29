@@ -1,18 +1,23 @@
 """
-Production settings: PostgreSQL, env-provided secrets.
+Production settings: PostgreSQL, env-provided secrets, WhiteNoise static files.
 
-NOTE: Phase 1 ships no production deployment. This module exists so the
-project is PostgreSQL-ready from day one; static file serving (e.g.
-whitenoise) and hardening are part of a later phase.
+All required secrets come from environment variables (see .env.example and the
+README's Coolify section). No Redis/Celery yet — that is Phase 3.
 """
 from .base import *  # noqa: F401,F403
-from .base import env
+from .base import MIDDLEWARE, env
 
 DEBUG = False
 
 SECRET_KEY = env("SECRET_KEY", required=True)
 
 ALLOWED_HOSTS = [h for h in env("ALLOWED_HOSTS", default="").split(",") if h]
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip()
+    for o in env("CSRF_TRUSTED_ORIGINS", default="").split(",")
+    if o.strip()
+]
 
 DATABASES = {
     "default": {
@@ -22,8 +27,20 @@ DATABASES = {
         "PASSWORD": env("DB_PASSWORD", required=True),
         "HOST": env("DB_HOST", default="localhost"),
         "PORT": env("DB_PORT", default="5432"),
+        "CONN_MAX_AGE": int(env("DB_CONN_MAX_AGE", default="60")),
     }
 }
+
+# Serve static files through WhiteNoise (no separate static server needed).
+MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+
+# Real deployments disable the one-click demo sign-in unless explicitly enabled.
+DEMO_LOGIN_ENABLED = env("DEMO_LOGIN_ENABLED", default="0") not in ("0", "false", "False")
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
