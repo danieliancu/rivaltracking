@@ -105,6 +105,7 @@ def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
     competitor = job.competitor
     try:
         if fetcher is not None or settings.SCANNING_LIVE:
+            from .persistence import persist_scan
             from .scraping.orchestration import run_competitor_scan
 
             outcome = run_competitor_scan(
@@ -112,7 +113,7 @@ def execute_scan_job(job_id, *, fetcher=None, persist_hook=None):
                 fetcher=fetcher,
                 job=job,
                 throttle=fetcher is None,
-                persist_hook=persist_hook,
+                persist_hook=persist_hook or persist_scan,
             )
             job.products_found = outcome.products_found
             job.pages_requested = outcome.pages_requested

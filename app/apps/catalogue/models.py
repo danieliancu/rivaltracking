@@ -109,6 +109,10 @@ class ProductListing(models.Model):
     first_seen_at = models.DateTimeField(null=True, blank=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
     active = models.BooleanField(default=True)
+    # Consecutive scans in which this listing was not seen; a removal event is
+    # only emitted once it crosses LISTING_MISSES_BEFORE_REMOVED (avoids false
+    # removals from transient crawl failures).
+    consecutive_misses = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
