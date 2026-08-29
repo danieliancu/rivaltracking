@@ -28,19 +28,35 @@ python -m venv .venv
 .venv\Scripts\activate            # Windows (source .venv/bin/activate elsewhere)
 pip install -r requirements/local.txt
 
-# 2. Database (SQLite; used only for sessions in Phase 1)
+# 2. Database (SQLite locally) — create the schema
 python manage.py migrate
 
-# 3. Run
+# 3. Seed a demo workspace (user, competitors, products, history, events)
+python manage.py seed_demo
+
+# 4. Run
 python manage.py runserver
 ```
 
-Open http://127.0.0.1:8000/. No environment variables are required locally
-(see `app/.env.example` for the production set).
+Open http://127.0.0.1:8000/. The app is **login-gated**. Either click
+**Enter the demo** on the sign-in page, or use the seeded credentials:
 
-The UI is populated by deterministic mock data. Anything you change (add a
-competitor, create an alert, save settings…) is stored in **your session
-only** — use the avatar menu → **Reset demo data** to restore the seed state.
+- **Email:** `demo@rivaltracking.com`
+- **Password:** `demo-rivaltracking`
+
+You can also **create a new account** (Sign up), which provisions a fresh empty
+workspace you own. No environment variables are required locally (see
+`app/.env.example` for the production set).
+
+Data is now stored in a real relational database (Phase 2). Each account
+belongs to one or more **workspaces**, and every competitor, product, price/
+stock snapshot, promotion and change event is scoped to a workspace — users
+never see another workspace's data. The **Reset demo data** action (avatar
+menu) re-seeds the current workspace.
+
+`python manage.py createsuperuser` gives you access to the Django admin at
+`/admin/` for inspecting users, workspaces, competitors, products, listings,
+snapshots, promotions and change events.
 
 ## Running Tailwind locally
 
@@ -64,9 +80,63 @@ cd app
 python -m pytest
 ```
 
-The suite renders every page and fragment route against the mock data.
+The suite renders every page and fragment route against a seeded workspace and
+covers authentication, workspace membership, **tenant isolation**, competitor/
+product/listing relationships, price/stock history, change events, selectors,
+HTMX fragments, pagination/filtering and the seed command.
 
-## Implementation status (Phase 1)
+## Deploying with PostgreSQL (Coolify)
+
+The Phase 1 demo ran on SQLite. To run Phase 2 against a Coolify PostgreSQL
+service, add a Postgres resource and set these environment variables on the app:
+
+```
+DJANGO_SETTINGS_MODULE=config.settings.demo   # or config.settings.production
+SECRET_KEY=<a long random string>
+ALLOWED_HOSTS=your-demo-host
+CSRF_TRUSTED_ORIGINS=https://your-demo-host
+DB_NAME=<postgres db>
+DB_USER=<postgres user>
+DB_PASSWORD=<postgres password>
+DB_HOST=<postgres service host>
+DB_PORT=5432
+```
+
+`config.settings.demo` uses PostgreSQL automatically when `DB_HOST` is set and
+otherwise falls back to the committed SQLite file, so the existing demo keeps
+working if you deploy without a database. On first deploy (and after model
+changes) run, inside the container:
+
+```bash
+python manage.py migrate
+python manage.py seed_demo
+```
+
+WhiteNoise serves the built static files (`collectstatic` runs in the
+Dockerfile). No Redis, Celery or scraping workers are involved yet — those
+arrive in Phase 3.
+
+## Implementation status (Phase 2 — product foundation)
+
+Phase 2 replaced the Phase 1 session mock store with a real relational model:
+
+- **Accounts & auth**: custom email-login `User`, sign-up / login / logout /
+  password-reset, login-gated app, one-click demo sign-in.
+- **Workspaces**: `Workspace`, `WorkspaceMembership` (owner/admin/member),
+  `WorkspaceSettings`; a user may belong to many workspaces; every business
+  object is workspace-scoped with enforced tenant isolation.
+- **Catalogue**: canonical `Product`, per-competitor `ProductListing`, customer
+  `OwnProduct`/`OwnListing`, and `PriceSnapshot`/`StockSnapshot`/`Promotion`
+  history; `Competitor`; `ChangeEvent`; `WatchlistItem`.
+- **DB-backed pages**: Overview (ORM-derived KPIs + charts), Competitors,
+  Products, Changes, global Search and Settings read/write the ORM.
+- **Placeholder apps** (Discovery, Ask AI, Alerts, Reports) keep deterministic
+  behaviour but are workspace-scoped via a `WorkspaceDemoState`-backed store —
+  their real engines are Phase 3.
+- **Ops**: Django admin for all models, `seed_demo` management command,
+  PostgreSQL-ready settings.
+
+## Phase 1 UI (still intact)
 
 Implemented — full UI with mock data:
 

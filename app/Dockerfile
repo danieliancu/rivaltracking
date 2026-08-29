@@ -15,4 +15,7 @@ RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Apply migrations on startup (idempotent), then serve. DJANGO_SETTINGS_MODULE
+# and DB_* are provided by the environment at runtime. Seed a demo workspace
+# separately with `python manage.py seed_demo`.
+CMD ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000"]

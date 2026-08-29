@@ -94,6 +94,67 @@ calls for ORM queries and task dispatches; views and templates are unchanged.
 
 No bundler; all JS is vendored under `static/js/vendor/`.
 
+## Phase 2 — data layer (implemented)
+
+Phase 2 replaced the session mock store with PostgreSQL-ready ORM models,
+authentication and multi-tenant workspaces. The `View → Selector / Service →
+Template` layering is unchanged; the swap happened **inside** each app's
+`selectors.py` / `services.py`, which now build the same dict/context shapes
+from ORM rows, so templates were untouched.
+
+### Identity & tenancy (`apps.accounts`)
+
+- **`User`** — custom `AbstractUser`, email is the login field (no username);
+  `apps.accounts.backends.EmailBackend` authenticates case-insensitively.
+- **`Workspace`** + **`WorkspaceMembership`** (roles: owner/admin/member,
+  extensible) + **`WorkspaceSettings`** (profile columns + JSON toggle
+  sections). A user may belong to many workspaces.
+- **`WorkspaceMiddleware`** sets `request.workspace` / `request.membership` from
+  the session's active workspace (validated against membership). The app is
+  gated by Django's `LoginRequiredMiddleware`; auth views opt out.
+
+### Tenant isolation
+
+Every business model has a `workspace` FK and a `WorkspaceManager` exposing
+`.for_workspace(ws)`. Selectors filter by `request.workspace`; detail lookups
+use `scoped_get_or_404` (`apps/core/scoping.py`) so foreign ids/slugs 404 (or
+render the app's "not in your workspace" empty state) without leaking
+existence. Services scope every write. `apps/accounts/tests/test_isolation.py`
+proves reads, search and mutations never cross tenants.
+
+### Data model
+
+| App | Models |
+|---|---|
+| `accounts` | User, Workspace, WorkspaceMembership, WorkspaceSettings |
+| `competitors` | Competitor (+ monitoring config, denormalised headline metrics) |
+| `catalogue` | Product (canonical), ProductListing, OwnProduct, OwnListing, PriceSnapshot, StockSnapshot, Promotion |
+| `changes` | ChangeEvent (typed, evidence + display strings in `metadata`) |
+| `products` | WatchlistItem |
+| `core` | WorkspaceDemoState (placeholder-app store) |
+
+`Product ── ProductListing ── Competitor` supports one canonical product matched
+to listings from many competitors; `OwnProduct`/`OwnListing` hold the customer's
+own catalogue. Automated matching is Phase 3 — links are seed/manual for now.
+Presentational-only fields (competitor headline counts, product tone/icon,
+match confidence) are stored so the UI keeps its exact content; the Overview
+KPIs/charts and the competitor/product/change KPIs are derived from ORM
+aggregates over the Today/7D/30D window.
+
+### Placeholder apps
+
+Discovery, Ask AI, Alerts and Reports keep deterministic behaviour but their
+user-mutable demo state is workspace-scoped in `WorkspaceDemoState` via
+`apps/core/store.py::WorkspaceStore` (same get/mutate/replace/reset façade the
+mock store had). Their real engines are Phase 3.
+
+### Seeding
+
+`apps/core/seed.py::seed_workspace` (and the `seed_demo` command) rebuild a
+workspace from the same `apps/<app>/data.py` fixtures, anchoring timestamps to
+"now" so relative-time labels render as before. It is idempotent. The test
+suite seeds workspaces through the same code path.
+
 ## Processing layer — future phase (NOT implemented)
 
 | Capability | Notes |
